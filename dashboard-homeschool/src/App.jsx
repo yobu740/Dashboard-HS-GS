@@ -47,6 +47,8 @@ import communityIcon from './assets/NavMenu-icon-Community.png'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
 import { useNewOnboarding, NewOnboardingWizard, DashboardTour, WeeklyInsightsCard } from './NewOnboardingSystem.jsx'
+import CatalogFilters from './CatalogFilters.jsx'
+import StudentDetailModal from './StudentDetailModal.jsx'
 import './App.css'
 
 // Progress Area Component
@@ -1526,30 +1528,7 @@ function App() {
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* Filters Sidebar */}
                 <div className="lg:col-span-1">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg text-blue-900">FILTROS</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="font-medium mb-3">Materias</h3>
-                          <div className="space-y-2">
-                            {[
-                              'English', 'Español', 'Matemáticas', 'Ciencias', 'Estudios Sociales',
-                              'Bellas Artes', 'Educación Física', 'Salud Escolar', 'Física',
-                              'Ciencia Ambiental', 'Estadística', 'Preparación al Cálculo'
-                            ].map((subject) => (
-                              <label key={subject} className="flex items-center space-x-2">
-                                <input type="checkbox" className="rounded" />
-                                <span className="text-sm">{subject}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <CatalogFilters onFiltersChange={(filters) => console.log('Filters changed:', filters)} />
                 </div>
 
                 {/* Lessons Grid */}
@@ -1608,8 +1587,12 @@ function App() {
                     ].map((lesson, index) => (
                       <Card key={index} className="hover:shadow-lg transition-shadow">
                         <CardHeader className="pb-3">
-                          <div className={`w-full h-24 ${lesson.color} rounded-lg mb-3 flex items-center justify-center`}>
-                            <BookOpen className="w-8 h-8 text-white" />
+                          <div className="w-full h-24 rounded-lg mb-3 overflow-hidden">
+                            <img 
+                              src="/catalog-default.jpg" 
+                              alt="Lesson Image" 
+                              className="w-full h-full object-cover"
+                            />
                           </div>
                           <CardTitle className="text-lg">{lesson.title}</CardTitle>
                           <div className="flex items-center space-x-2">
@@ -2158,24 +2141,7 @@ function App() {
                       </div>
                     </div>
                     
-                    {/* Available Plans */}
-                    <div className="space-y-2 mb-4">
-                      <div className="text-sm font-medium text-gray-700">Planes disponibles:</div>
-                      <div className="space-y-1">
-                        <div className="text-sm p-2 bg-blue-50 rounded border-l-4 border-blue-400">
-                          <div className="font-medium">Plan de 2do grado - Inglés</div>
-                          <div className="text-gray-600">15 semanas • Contextualizado a PR</div>
-                        </div>
-                        <div className="text-sm p-2 bg-green-50 rounded border-l-4 border-green-400">
-                          <div className="font-medium">Plan de Ciencias - Puerto Rico</div>
-                          <div className="text-gray-600">10 semanas • Experimentos locales</div>
-                        </div>
-                        <div className="text-sm p-2 bg-purple-50 rounded border-l-4 border-purple-400">
-                          <div className="font-medium">Matemáticas Básicas</div>
-                          <div className="text-gray-600">12 semanas • Nivel adaptativo</div>
-                        </div>
-                      </div>
-                    </div>
+
                     
                     <Button className="w-full" onClick={() => setShowCatalogPlans(true)}>
                       <BookOpen className="w-4 h-4 mr-2" />
@@ -2215,20 +2181,7 @@ function App() {
                       </div>
                     </div>
                     
-                    {/* Current Plans */}
-                    <div className="space-y-2 mb-4">
-                      <div className="text-sm font-medium text-gray-700">Tus planes actuales:</div>
-                      <div className="space-y-1">
-                        <div className="text-sm p-2 bg-gray-50 rounded border-l-4 border-gray-400">
-                          <div className="font-medium">Plan Familiar - Septiembre</div>
-                          <div className="text-gray-600">3 estudiantes • En progreso</div>
-                        </div>
-                        <div className="text-sm p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
-                          <div className="font-medium">Experimentos de Ciencias</div>
-                          <div className="text-gray-600">Proyecto personalizado • Borrador</div>
-                        </div>
-                      </div>
-                    </div>
+
                     
                     <Button 
                       className="w-full" 
@@ -2251,114 +2204,20 @@ function App() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Create Assignments */}
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-gray-900">Crear Asignaciones</h4>
-                      <p className="text-sm text-gray-600">
-                        Diseña tareas y proyectos personalizados para tus estudiantes.
-                      </p>
-                      <div className="space-y-2">
-                        <Button size="sm" className="w-full" onClick={() => setShowAssignmentCreation(true)}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Nueva Asignación
-                        </Button>
-                        <Button size="sm" variant="outline" className="w-full">
-                          <FileText className="w-4 h-4 mr-2" />
-                          Plantillas de Tareas
-                        </Button>
-                      </div>
-                      
-                      {/* Recent Assignments */}
-                      <div className="space-y-2">
-                        <div className="text-xs font-medium text-gray-500">Asignaciones recientes:</div>
-                        <div className="space-y-1">
-                          <div className="text-xs p-2 bg-blue-50 rounded">
-                            <div className="font-medium">Ensayo sobre Puerto Rico</div>
-                            <div className="text-gray-600">María • Vence: 20 Sep</div>
-                          </div>
-                          <div className="text-xs p-2 bg-green-50 rounded">
-                            <div className="font-medium">Proyecto de Volcanes</div>
-                            <div className="text-gray-600">Juan • Vence: 25 Sep</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Comments and Observations */}
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-gray-900">Comentarios y Observaciones</h4>
-                      <p className="text-sm text-gray-600">
-                        Registra observaciones del progreso y comportamiento de tus estudiantes.
-                      </p>
-                      
-                      {/* Quick Notes */}
-                      <div className="space-y-2">
-                        <textarea 
-                          placeholder="Escribe una observación rápida..."
-                          className="w-full text-sm border rounded p-2 h-20 resize-none"
-                        />
-                        <Button size="sm" className="w-full">
-                          <MessageSquare className="w-4 h-4 mr-2" />
-                          Guardar Observación
-                        </Button>
-                      </div>
-                      
-                      {/* Recent Observations */}
-                      <div className="space-y-2">
-                        <div className="text-xs font-medium text-gray-500">Observaciones recientes:</div>
-                        <div className="space-y-1">
-                          <div className="text-xs p-2 bg-yellow-50 rounded">
-                            <div className="font-medium">María - Matemáticas</div>
-                            <div className="text-gray-600">"Excelente progreso en fracciones"</div>
-                            <div className="text-gray-400">Hace 2 días</div>
-                          </div>
-                          <div className="text-xs p-2 bg-purple-50 rounded">
-                            <div className="font-medium">Juan - Lectura</div>
-                            <div className="text-gray-600">"Necesita más práctica en comprensión"</div>
-                            <div className="text-gray-400">Hace 3 días</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Rubrics */}
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-gray-900">Rúbricas Sugeridas</h4>
-                      <p className="text-sm text-gray-600">
-                        Utiliza rúbricas prediseñadas para evaluar proyectos escritos y artísticos.
-                      </p>
-                      
-                      {/* Rubric Categories */}
-                      <div className="space-y-2">
-                        <Button size="sm" variant="outline" className="w-full justify-start">
-                          <FileText className="w-4 h-4 mr-2" />
-                          Rúbrica de Escritura
-                        </Button>
-                        <Button size="sm" variant="outline" className="w-full justify-start">
-                          <Palette className="w-4 h-4 mr-2" />
-                          Rúbrica de Arte
-                        </Button>
-                        <Button size="sm" variant="outline" className="w-full justify-start">
-                          <Presentation className="w-4 h-4 mr-2" />
-                          Rúbrica de Presentaciones
-                        </Button>
-                        <Button size="sm" variant="outline" className="w-full justify-start">
-                          <Calculator className="w-4 h-4 mr-2" />
-                          Rúbrica de Matemáticas
-                        </Button>
-                      </div>
-                      
-                      {/* Sample Rubric Preview */}
-                      <div className="text-xs bg-gray-50 rounded p-2">
-                        <div className="font-medium mb-1">Vista previa - Rúbrica de Escritura:</div>
-                        <div className="space-y-1 text-gray-600">
-                          <div>• Organización de ideas (1-4 puntos)</div>
-                          <div>• Gramática y ortografía (1-4 puntos)</div>
-                          <div>• Creatividad y originalidad (1-4 puntos)</div>
-                          <div>• Cumplimiento de requisitos (1-4 puntos)</div>
-                        </div>
-                      </div>
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-gray-900">Crear Asignaciones</h4>
+                    <p className="text-sm text-gray-600">
+                      Diseña tareas y proyectos personalizados para tus estudiantes.
+                    </p>
+                    <div className="space-y-2">
+                      <Button size="sm" className="w-full" onClick={() => setShowAssignmentCreation(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Nueva Asignación
+                      </Button>
+                      <Button size="sm" variant="outline" className="w-full">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Plantillas de Tareas
+                      </Button>
                     </div>
                   </div>
                   
@@ -3419,6 +3278,52 @@ function App() {
                 </CardContent>
               </Card>
 
+              {/* Observaciones y Rúbricas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Observaciones */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Observaciones</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Registra observaciones del progreso y comportamiento de tus estudiantes.
+                    </p>
+                    <textarea 
+                      placeholder="Escribe una observación..."
+                      className="w-full text-sm border rounded p-2 h-20 resize-none"
+                    />
+                    <Button size="sm" className="w-full">
+                      Guardar Observación
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Rúbricas */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Rúbricas</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Utiliza rúbricas prediseñadas para evaluar proyectos.
+                    </p>
+                    <div className="space-y-2">
+                      <Button size="sm" variant="outline" className="w-full justify-start">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Rúbrica de Escritura
+                      </Button>
+                      <Button size="sm" variant="outline" className="w-full justify-start">
+                        Rúbrica de Arte
+                      </Button>
+                      <Button size="sm" variant="outline" className="w-full justify-start">
+                        Rúbrica de Presentaciones
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
               <div>
                 <h3 className="text-xl font-semibold text-gray-800 mt-8">Asignaciones Existentes</h3>
                 <p className="text-gray-600">No hay asignaciones creadas aún.</p>
@@ -3490,17 +3395,15 @@ function App() {
         </div>
       )}
 
-      {/* Student Detail View */}
+      {/* Student Detail Modal */}
       {showStudentDetail && selectedStudent && (
-        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
-          <StudentDetailView 
-            student={selectedStudent}
-            onClose={() => {
-              setShowStudentDetail(false);
-              setSelectedStudent(null);
-            }}
-          />
-        </div>
+        <StudentDetailModal 
+          student={selectedStudent}
+          onClose={() => {
+            setShowStudentDetail(false);
+            setSelectedStudent(null);
+          }}
+        />
       )}
 
       {/* Onboarding System */}

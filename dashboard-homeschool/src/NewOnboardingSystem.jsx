@@ -1058,6 +1058,7 @@ export function NewOnboardingWizard({ onFinish }) {
 // Dashboard Tour Component (unchanged but improved)
 export function DashboardTour({ onComplete }) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   
   const tourSteps = [
     {
@@ -1068,8 +1069,8 @@ export function DashboardTour({ onComplete }) {
     },
     {
       target: '[data-menu="planificacion"]',
-      title: 'Planes recomendados',
-      content: 'Catálogo editable por grado y materia.',
+      title: 'Gestión Académica',
+      content: 'Administre los planes académicos de su hijo y cree asignaciones.',
       position: 'right'
     },
     {
@@ -1077,10 +1078,74 @@ export function DashboardTour({ onComplete }) {
       title: 'Calendario',
       content: 'Arrastra para reprogramar. Clic para ver detalles.',
       position: 'right'
+    },
+    {
+      target: '[data-menu="catalogo"]',
+      title: 'Catálogo',
+      content: 'Vea el catálogo de lecciones de Genial Skills y asigne lecciones desde el mismo.',
+      position: 'right'
+    },
+    {
+      target: '[data-menu="portafolio"]',
+      title: 'Portafolio',
+      content: 'Genera un portafolio para tu hijo con todas las lecciones, proyectos y evaluaciones.',
+      position: 'right'
+    },
+    {
+      target: '[data-menu="comunidad"]',
+      title: 'Comunidad',
+      content: 'Conecte con otros homeschoolers o acceda a guías y recursos para su gestión académica.',
+      position: 'right'
     }
   ];
 
   const currentTourStep = tourSteps[currentStep];
+
+  // Calculate tooltip position based on target element
+  useEffect(() => {
+    const updatePosition = () => {
+      const targetElement = document.querySelector(currentTourStep.target);
+      if (targetElement) {
+        const rect = targetElement.getBoundingClientRect();
+        let top, left;
+        
+        switch (currentTourStep.position) {
+          case 'bottom':
+            top = rect.bottom + 10;
+            left = rect.left + (rect.width / 2) - 150; // Center tooltip (300px width / 2)
+            break;
+          case 'right':
+            top = rect.top + (rect.height / 2) - 75; // Center vertically (150px height / 2)
+            left = rect.right + 10;
+            break;
+          case 'left':
+            top = rect.top + (rect.height / 2) - 75;
+            left = rect.left - 310; // Tooltip width + margin
+            break;
+          case 'top':
+            top = rect.top - 160; // Tooltip height + margin
+            left = rect.left + (rect.width / 2) - 150;
+            break;
+          default:
+            top = rect.bottom + 10;
+            left = rect.left;
+        }
+        
+        // Ensure tooltip stays within viewport
+        const maxLeft = window.innerWidth - 320;
+        const maxTop = window.innerHeight - 170;
+        
+        setTooltipPosition({
+          top: Math.max(10, Math.min(top, maxTop)),
+          left: Math.max(10, Math.min(left, maxLeft))
+        });
+      }
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    return () => window.removeEventListener('resize', updatePosition);
+  }, [currentStep, currentTourStep]);
 
   const nextStep = () => {
     if (currentStep < tourSteps.length - 1) {
@@ -1094,52 +1159,93 @@ export function DashboardTour({ onComplete }) {
     onComplete();
   };
 
+  // Highlight target element
+  useEffect(() => {
+    const targetElement = document.querySelector(currentTourStep.target);
+    if (targetElement) {
+      targetElement.style.position = 'relative';
+      targetElement.style.zIndex = '45';
+      targetElement.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)';
+      targetElement.style.borderRadius = '8px';
+      
+      return () => {
+        targetElement.style.position = '';
+        targetElement.style.zIndex = '';
+        targetElement.style.boxShadow = '';
+        targetElement.style.borderRadius = '';
+      };
+    }
+  }, [currentStep, currentTourStep]);
+
   return (
-    <div className="fixed top-4 right-4 z-50 bg-white rounded-lg shadow-xl p-4 max-w-sm border-2 border-blue-500">
-      <div className="flex justify-between items-start mb-2">
-        <h3 className="font-semibold text-gray-800">{currentTourStep.title}</h3>
-        <button onClick={skipTour} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar tour">
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+    <>
+      {/* Overlay */}
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" />
       
-      <p className="text-gray-600 mb-4">{currentTourStep.content}</p>
-      
-      <div className="flex justify-between items-center">
-        <span className="text-xs text-gray-500">
-          Paso {currentStep + 1} de {tourSteps.length}
-        </span>
-        
-        <div className="flex gap-2">
-          <button 
-            onClick={skipTour}
-            className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-          >
-            Omitir
-          </button>
-          <button 
-            onClick={nextStep}
-            className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            {currentStep < tourSteps.length - 1 ? 'Siguiente' : 'Finalizar'}
+      {/* Tooltip */}
+      <div 
+        className="fixed z-50 bg-white rounded-lg shadow-xl p-4 w-80 border-2 border-blue-500"
+        style={{ 
+          top: `${tooltipPosition.top}px`, 
+          left: `${tooltipPosition.left}px` 
+        }}
+      >
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="font-semibold text-gray-800">{currentTourStep.title}</h3>
+          <button onClick={skipTour} className="text-gray-400 hover:text-gray-600" aria-label="Cerrar tour">
+            <X className="w-4 h-4" />
           </button>
         </div>
+        
+        <p className="text-gray-600 mb-4">{currentTourStep.content}</p>
+        
+        <div className="flex justify-between items-center">
+          <span className="text-xs text-gray-500">
+            Paso {currentStep + 1} de {tourSteps.length}
+          </span>
+          
+          <div className="flex gap-2">
+            <button 
+              onClick={skipTour}
+              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+            >
+              Omitir
+            </button>
+            <button 
+              onClick={nextStep}
+              className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              {currentStep < tourSteps.length - 1 ? 'Siguiente' : 'Finalizar'}
+            </button>
+          </div>
+        </div>
       </div>
-      
-      {/* Arrow pointing to target */}
-      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-        <div className="w-4 h-4 bg-white border-r border-b border-blue-500 transform rotate-45"></div>
-      </div>
-    </div>
+    </>
   );
 }
 
-// Weekly Insights Card (unchanged)
+// Weekly Insights Component - DISABLED during onboarding
 export function WeeklyInsightsCard({ onDismiss }) {
+  // Component disabled to avoid interference with onboarding tutorial
+  return null;
+  
+  /* ORIGINAL CODE - COMMENTED OUT
   const kpis = [
-    { icon: CheckCircle, text: 'María completó 5 de 7 sesiones (+2)', color: 'text-green-500' },
-    { icon: AlertTriangle, text: 'Juan tiene 2 pendientes en Matemáticas', color: 'text-yellow-500' },
-    { icon: Star, text: 'Sofía ganó la insignia Exploradora Científica', color: 'text-purple-500' },
+    {
+      icon: CheckCircle,
+      text: "María completó 5 de 7 sesiones (+2)",
+      color: "text-green-600"
+    },
+    {
+      icon: AlertTriangle,
+      text: "Juan tiene 2 pendientes en Matemáticas",
+      color: "text-amber-600"
+    },
+    {
+      icon: Star,
+      text: "Sofía ganó la insignia Exploradora Científica",
+      color: "text-purple-600"
+    }
   ];
 
   return (
@@ -1168,19 +1274,14 @@ export function WeeklyInsightsCard({ onDismiss }) {
       </ul>
       
       <div className="flex gap-2">
-        <a 
-          href="/calendar" 
-          className="flex-1 px-3 py-2 text-sm border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-center"
-        >
+        <button className="flex-1 text-xs bg-blue-50 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors">
           Ver calendario
-        </a>
-        <a 
-          href="/gestion-academica?tab=avanza" 
-          className="flex-1 px-3 py-2 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 text-center"
-        >
+        </button>
+        <button className="flex-1 text-xs bg-orange-50 text-orange-700 px-3 py-2 rounded-lg hover:bg-orange-100 transition-colors">
           Asignar Avanza
-        </a>
+        </button>
       </div>
     </aside>
   );
+  */
 }
