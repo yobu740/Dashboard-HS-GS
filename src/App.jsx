@@ -572,7 +572,7 @@ function App() {
 </body>
 </html>
     `;
-
+    
     // Create and download the PDF
     const blob = new Blob([reportContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
@@ -664,8 +664,6 @@ function App() {
     }
   ]
 
-
-
   // Calendar data
   const calendarStudents = [
     {"id":"s1","name":"María","color":"#2979FF"},
@@ -753,8 +751,6 @@ function App() {
     }
   ])
 
-
-
   // Student Detail View Component
   const StudentDetailView = ({ student, onClose }) => {
     const [range, setRange] = useState("weekly")
@@ -807,7 +803,7 @@ function App() {
     ].filter(a => subjectFilter === "Todas" || a.subject === subjectFilter)
 
     const fmt = (iso) => new Date(iso).toLocaleString("es-PR", { timeZone: "America/Puerto_Rico", hour12: true })
-    const fmtDate = (iso) => new Date(iso).toLocaleDateString("es-PR", { timeZone: "America/Puerto_Rico" })
+    const fmtDate = (iso) => new Date(iso).toLocaleDateString("es-PR")
 
     const addNote = () => {
       const text = noteText.trim()
@@ -1168,7 +1164,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-slate-700 text-white px-6 py-4 flex items-center justify-between">
+      <header className="bg-slate-700 text-white px-6 py-4 flex flex-wrap items-center justify-between">
         <div className="flex items-center space-x-4">
           <img src={logo} alt="Genial Skills" className="h-8" />
         </div>
@@ -1186,10 +1182,10 @@ function App() {
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex flex-col md:flex-row">
         {/* Sidebar */}
-        <aside className="w-32 min-h-screen" style={{backgroundColor: '#c0a267'}}>
-          <nav className="p-4">
+        <aside className="w-full md:w-32 md:min-h-screen" style={{backgroundColor: '#c0a267'}}>
+          <nav className="p-4 grid grid-cols-3 gap-2 md:block">
             {menuItems.map((item) => {
               const LucideIcon = item.lucideIcon
               return (
@@ -1197,7 +1193,7 @@ function App() {
                   key={item.id}
                   data-menu={item.id}
                   onClick={() => setActiveSection(item.id)}
-                  className={`w-full flex flex-col items-center justify-center px-2 py-3 mb-2 rounded-lg transition-colors ${
+                  className={`w-full flex flex-col items-center justify-center px-2 py-3 mb-0 md:mb-2 rounded-lg transition-colors ${
                     activeSection === item.id 
                       ? 'bg-yellow-700 text-white' 
                       : 'text-yellow-100 hover:bg-yellow-700 hover:text-white'
@@ -1517,7 +1513,7 @@ function App() {
           {/* Catálogo Section */}
           {activeSection === 'catalogo' && (
             <div className="space-y-6">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-wrap justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-gray-900">Catálogo de lecciones</h1>
                 <Button variant="outline" size="sm" className="text-gray-600">
                   <BookOpen className="w-4 h-4 mr-2" />
@@ -1761,7 +1757,7 @@ function App() {
           {/* Calendar Section */}
           {activeSection === 'calendario' && (
             <div className="space-y-6">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-wrap justify-between items-center mb-6">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">Calendario Académico</h1>
                   <p className="text-gray-600">Gestiona las lecciones asignadas a tus estudiantes</p>
@@ -1867,8 +1863,7 @@ function App() {
                         const dayEvents = calendarEvents.filter(event => {
                           const eventDate = new Date(event.start);
                           const eventDay = eventDate.getDate();
-                          const isVisible = studentFilters[event.studentId] && 
-                                          (subjectFilter === 'all' || event.subject === subjectFilter);
+                          const isVisible = studentFilters[event.studentId] && (subjectFilter === 'all' || event.subject === subjectFilter);
                           return eventDay === day && isVisible;
                         });
                         
@@ -1926,70 +1921,71 @@ function App() {
                       <div className="text-center font-semibold text-gray-700">
                         Semana del 15 - 21 de Septiembre, 2025
                       </div>
-                      <div className="grid grid-cols-8 gap-2">
-                        <div className="font-semibold text-gray-600">Hora</div>
-                        {['Lun 15', 'Mar 16', 'Mié 17', 'Jue 18', 'Vie 19', 'Sáb 20', 'Dom 21'].map(day => (
-                          <div key={day} className="text-center font-semibold text-gray-600 p-2 border-b">
-                            {day}
-                          </div>
-                        ))}
-                        
-                        {/* Time slots */}
-                        {Array.from({ length: 12 }, (_, i) => {
-                          const hour = i + 8; // 8 AM to 7 PM
-                          return (
-                            <React.Fragment key={hour}>
-                              <div className="text-sm text-gray-500 p-2">
-                                {hour}:00
-                              </div>
-                              {Array.from({ length: 7 }, (_, dayIndex) => {
-                                const dayDate = 15 + dayIndex;
-                                const dayEvents = calendarEvents.filter(event => {
-                                  const eventDate = new Date(event.start);
-                                  const eventDay = eventDate.getDate();
-                                  const eventHour = eventDate.getHours();
-                                  const isVisible = studentFilters[event.studentId] && 
-                                                  (subjectFilter === 'all' || event.subject === subjectFilter);
-                                  return eventDay === dayDate && eventHour === hour && isVisible;
-                                });
-                                
-                                return (
-                                  <div key={dayIndex} className="min-h-[60px] p-1 border border-gray-100">
-                                    {dayEvents.map(event => {
-                                      const student = calendarStudents.find(s => s.id === event.studentId);
-                                      return (
-                                        <div
-                                          key={event.id}
-                                          className={`text-xs p-2 rounded cursor-pointer transition-all hover:shadow-md ${
-                                            event.status === 'completed' ? 'opacity-60' : ''
-                                          } ${
-                                            event.status === 'in_progress' ? 'border-l-4 border-yellow-400' : ''
-                                          }`}
-                                          style={{ 
-                                            backgroundColor: student?.color + '20',
-                                            borderColor: event.status === 'assigned' ? student?.color : undefined,
-                                            borderWidth: event.status === 'assigned' ? '2px' : undefined
-                                          }}
-                                          onClick={() => {
-                                            setSelectedEvent(event);
-                                            setShowEventModal(true);
-                                          }}
-                                        >
-                                          <div className="flex items-center space-x-1">
-                                            <span>{event.icon}</span>
-                                            <span className="truncate">{event.title}</span>
-                                            {event.status === 'completed' && <span>✓</span>}
+                      <div className="overflow-x-auto">
+                        <div className="grid grid-cols-8 gap-2">
+                          <div className="font-semibold text-gray-600">Hora</div>
+                          {['Lun 15', 'Mar 16', 'Mié 17', 'Jue 18', 'Vie 19', 'Sáb 20', 'Dom 21'].map(day => (
+                            <div key={day} className="text-center font-semibold text-gray-600 p-2 border-b">
+                              {day}
+                            </div>
+                          ))}
+                          
+                          {/* Time slots */}
+                          {Array.from({ length: 12 }, (_, i) => {
+                            const hour = i + 8; // 8 AM to 7 PM
+                            return (
+                              <React.Fragment key={hour}>
+                                <div className="text-sm text-gray-500 p-2">
+                                  {hour}:00
+                                </div>
+                                {Array.from({ length: 7 }, (_, dayIndex) => {
+                                  const dayDate = 15 + dayIndex;
+                                  const dayEvents = calendarEvents.filter(event => {
+                                    const eventDate = new Date(event.start);
+                                    const eventDay = eventDate.getDate();
+                                    const eventHour = eventDate.getHours();
+                                    const isVisible = studentFilters[event.studentId] && (subjectFilter === 'all' || event.subject === subjectFilter);
+                                    return eventDay === dayDate && eventHour === hour && isVisible;
+                                  });
+                                  
+                                  return (
+                                    <div key={dayIndex} className="min-h-[60px] p-1 border border-gray-100">
+                                      {dayEvents.map(event => {
+                                        const student = calendarStudents.find(s => s.id === event.studentId);
+                                        return (
+                                          <div
+                                            key={event.id}
+                                            className={`text-xs p-2 rounded cursor-pointer transition-all hover:shadow-md ${
+                                              event.status === 'completed' ? 'opacity-60' : ''
+                                            } ${
+                                              event.status === 'in_progress' ? 'border-l-4 border-yellow-400' : ''
+                                            }`}
+                                            style={{ 
+                                              backgroundColor: student?.color + '20',
+                                              borderColor: event.status === 'assigned' ? student?.color : undefined,
+                                              borderWidth: event.status === 'assigned' ? '2px' : undefined
+                                            }}
+                                            onClick={() => {
+                                              setSelectedEvent(event);
+                                              setShowEventModal(true);
+                                            }}
+                                          >
+                                            <div className="flex items-center space-x-1">
+                                              <span>{event.icon}</span>
+                                              <span className="truncate">{event.title}</span>
+                                              {event.status === 'completed' && <span>✓</span>}
+                                            </div>
+                                            <div className="text-gray-600">{student?.name}</div>
                                           </div>
-                                          <div className="text-gray-600">{student?.name}</div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                );
-                              })}
-                            </React.Fragment>
-                          );
-                        })}
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })}
+                              </React.Fragment>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -2260,7 +2256,7 @@ function App() {
           {activeSection === 'planificacion' && showCustomPlanning && (
             <div className="space-y-6">
               {/* Header */}
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-wrap justify-between items-center mb-6">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">Planificación personalizada</h1>
                 </div>
@@ -2407,7 +2403,7 @@ function App() {
                     </nav>
 
                     {/* Toolbar */}
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-wrap justify-between items-center mb-6">
                       <h2 className="text-xl font-semibold text-gray-900">Lecciones</h2>
                       <div className="flex gap-3">
                         <select className="bg-white border border-gray-300 text-gray-700 rounded px-3 py-2 text-sm">
@@ -2480,7 +2476,7 @@ function App() {
           {showPlanningModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
-                <div className="flex justify-between items-center p-6 border-b border-gray-200">
+                <div className="flex flex-wrap justify-between items-center p-6 border-b border-gray-200">
                   <h3 className="text-xl font-semibold text-gray-900">Nuevo elemento</h3>
                   <button 
                     onClick={() => setShowPlanningModal(false)}
@@ -3415,4 +3411,3 @@ function App() {
 }
 
 export default App
-
