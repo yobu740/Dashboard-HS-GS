@@ -48,7 +48,8 @@ import portfolioIcon from './assets/NavMenu-icon-Portfolio.png'
 import communityIcon from './assets/NavMenu-icon-Community.png'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { useNewOnboarding, NewOnboardingWizard, DashboardTour, WeeklyInsightsCard } from './NewOnboardingSystem.jsx'
+import { useNewOnboarding, DashboardTour, WeeklyInsightsCard } from './NewOnboardingSystem.jsx';
+import OnboardingWizard from './OnboardingWizard.jsx';
 import CatalogFilters from './CatalogFilters.jsx'
 import StudentDetailModal from './StudentDetailModal.jsx'
 import './App.css'
@@ -3474,7 +3475,7 @@ function App() {
       )}
 
       {/* Onboarding System */}
-      {showWizard && <NewOnboardingWizard onFinish={completeWizard} />}
+      {showWizard && <OnboardingWizard onFinish={completeWizard} />}
       {showTour && <DashboardTour onComplete={completeTour} />}
       {showWeeklyInsights && <WeeklyInsightsCard onDismiss={dismissWeeklyInsights} />}
     </div>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Upload, Calendar, BookOpen, Users, Settings, Check } from 'lucide-react';
+import ModalWrapper from './components/ModalWrapper' // o la ruta que uses
+import './styles/modal.css'
 
 // Types and interfaces (adapted from TypeScript)
 const PLAN_CADENCES = {
@@ -33,7 +35,84 @@ const AVAILABLE_PLANS = {
   ]
 };
 
-// Hook for onboarding state management
+/** Paquetes de asignaciones pre-hechas por materia (Paso 5) */
+const PREMADE_ASSIGNMENT_PACKAGES = {
+  'Español': [
+    {
+      id: 'pkg_esp_basico',
+      name: 'Asignaciones Español - Básico',
+      items: [
+        { title: 'Dictado #1', weight: 10 },
+        { title: 'Comprensión de lectura A', weight: 15 },
+        { title: 'Escritura: Mi fin de semana', weight: 20 }
+      ]
+    },
+    {
+      id: 'pkg_esp_intermedio',
+      name: 'Asignaciones Español - Intermedio',
+      items: [
+        { title: 'Gramática: Sustantivos y adjetivos', weight: 15 },
+        { title: 'Comprensión de lectura B', weight: 15 },
+        { title: 'Ensayo corto: Mi héroe', weight: 20 }
+      ]
+    }
+  ],
+  'Matemáticas': [
+    {
+      id: 'pkg_math_basico',
+      name: 'Asignaciones Matemáticas - Básico',
+      items: [
+        { title: 'Suma y resta 0-100', weight: 10 },
+        { title: 'Problemas de palabras (intro)', weight: 15 },
+        { title: 'Fact fluency 1', weight: 10 }
+      ]
+    },
+    {
+      id: 'pkg_math_intermedio',
+      name: 'Asignaciones Matemáticas - Intermedio',
+      items: [
+        { title: 'Multiplicación (tabla del 2–5)', weight: 15 },
+        { title: 'División básica (entre 2–5)', weight: 15 },
+        { title: 'Fracciones: mitades y cuartos', weight: 20 }
+      ]
+    }
+  ],
+  'Ciencias': [
+    {
+      id: 'pkg_sci_naturaleza',
+      name: 'Ciencias - Naturaleza y método',
+      items: [
+        { title: 'Diario de observación 1', weight: 10 },
+        { title: 'Experimento: germinación', weight: 20 },
+        { title: 'Quiz método científico', weight: 10 }
+      ]
+    }
+  ],
+  'Estudios Sociales': [
+    {
+      id: 'pkg_soc_comunidad',
+      name: 'Sociales - Mi comunidad',
+      items: [
+        { title: 'Mapa de mi barrio', weight: 15 },
+        { title: 'Entrevista a un vecino', weight: 15 },
+        { title: 'Línea de tiempo familiar', weight: 20 }
+      ]
+    }
+  ],
+  'Inglés': [
+    {
+      id: 'pkg_eng_basics',
+      name: 'English - Basics',
+      items: [
+        { title: 'Phonics practice A', weight: 10 },
+        { title: 'Reading log (1 semana)', weight: 15 },
+        { title: 'Vocabulary set #1', weight: 10 }
+      ]
+    }
+  ]
+};
+
+// Hook para mostrar la primera vez (si lo usas externamente, puedes ignorar este hook)
 export function useOnboardingWizard() {
   const [showWizard, setShowWizard] = useState(false);
   const [onboardingPayload, setOnboardingPayload] = useState({
@@ -182,7 +261,7 @@ function Step2Cadence({ cadence, onSelectCadence, onSkip }) {
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Elige el tipo de plan</h2>
-        <p className="text-gray-600">Selecciona una cadencia para organizar tus lecciones.</p>
+        <p className="text-gray-600">Selecciona el período para organizar tus lecciones.</p>
       </div>
 
       <div className="space-y-4">
@@ -411,7 +490,7 @@ function Step4StartDates({ students, appliedPlans, startDates, onSetStartDate })
   );
 }
 
-// Step 5: Assignment Bank
+/* ---------- STEP 5: Assignment Bank (con paquetes pre-hechos) ---------- */
 function Step5AssignmentBank({ students, assignmentBanks, onAddAssignment, onSkip }) {
   const [showSkipModal, setShowSkipModal] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
@@ -420,39 +499,56 @@ function Step5AssignmentBank({ students, assignmentBanks, onAddAssignment, onSki
     title: '',
     weight: ''
   });
+  const [selectedPackageId, setSelectedPackageId] = useState('');
 
+  // Agrega 1 asignación o un paquete completo
   const addAssignment = () => {
-    if (newAssignment.studentId && newAssignment.subject && newAssignment.title) {
+    if (!newAssignment.studentId || !newAssignment.subject) return;
+
+    // Si hay paquete seleccionado, agrega todas las items del paquete
+    const pkgList = PREMADE_ASSIGNMENT_PACKAGES[newAssignment.subject] || [];
+    const pkg = pkgList.find(p => p.id === selectedPackageId);
+
+    if (pkg) {
+      pkg.items.forEach(item => {
+        onAddAssignment({
+          studentId: newAssignment.studentId,
+          subject: newAssignment.subject,
+          title: item.title,
+          weight: item.weight
+        });
+      });
+      // Limpia el selector de paquete tras agregar
+      setSelectedPackageId('');
+      return;
+    }
+
+    // Si no hay paquete, agrega la asignación individual (por título)
+    if (newAssignment.title.trim()) {
       onAddAssignment({
-        ...newAssignment,
+        studentId: newAssignment.studentId,
+        subject: newAssignment.subject,
+        title: newAssignment.title.trim(),
         weight: newAssignment.weight ? parseInt(newAssignment.weight) : undefined
       });
-      setNewAssignment({
-        studentId: '',
-        subject: '',
-        title: '',
-        weight: ''
-      });
+      setNewAssignment({ studentId: '', subject: '', title: '', weight: '' });
     }
   };
 
-  const handleSkip = () => {
-    setShowSkipModal(true);
-  };
+  const confirmSkip = () => { setShowSkipModal(false); onSkip(); };
 
-  const confirmSkip = () => {
-    setShowSkipModal(false);
-    onSkip();
-  };
+  const packagesForSubject = PREMADE_ASSIGNMENT_PACKAGES[newAssignment.subject] || [];
 
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Añade un banco de asignaciones</h2>
-        <p className="text-gray-600">Crea una lista inicial de actividades para cada plan. Puedes ampliarlo en Planificación.</p>
+        <p className="text-gray-600">
+          Usa el campo “Título” para una tarea específica o elige un <strong>paquete pre-hecho</strong> por materia para agregar varias.
+        </p>
       </div>
 
-      {/* Add Assignment Form */}
+      {/* Formulario: ahora con selector de paquete */}
       <div className="bg-gray-50 p-4 rounded-lg">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
           <div>
@@ -468,11 +564,15 @@ function Step5AssignmentBank({ students, assignmentBanks, onAddAssignment, onSki
               ))}
             </select>
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Materia</label>
             <select
               value={newAssignment.subject}
-              onChange={(e) => setNewAssignment(prev => ({ ...prev, subject: e.target.value }))}
+              onChange={(e) => { 
+                setNewAssignment(prev => ({ ...prev, subject: e.target.value }));
+                setSelectedPackageId('');
+              }}
               className="w-full border rounded-lg px-3 py-2"
             >
               <option value="">Seleccionar...</option>
@@ -481,6 +581,8 @@ function Step5AssignmentBank({ students, assignmentBanks, onAddAssignment, onSki
               ))}
             </select>
           </div>
+
+          {/* Título de asignación individual */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
             <input
@@ -491,8 +593,9 @@ function Step5AssignmentBank({ students, assignmentBanks, onAddAssignment, onSki
               placeholder="Nombre de la asignación"
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ponderación</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Puntos</label>
             <input
               type="number"
               value={newAssignment.weight}
@@ -503,59 +606,73 @@ function Step5AssignmentBank({ students, assignmentBanks, onAddAssignment, onSki
               max="100"
             />
           </div>
-          <button
-            onClick={addAssignment}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-          >
+
+          {/* Botón principal (agrega título o paquete) */}
+          <button onClick={addAssignment} className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
             Añadir
           </button>
         </div>
+
+        {/* Selector de paquete (opcional) */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+          <div className="md:col-span-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Paquete pre-hecho (opcional)
+            </label>
+            <select
+              disabled={!newAssignment.subject}
+              value={selectedPackageId}
+              onChange={(e) => setSelectedPackageId(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 disabled:bg-gray-100"
+            >
+              <option value="">{newAssignment.subject ? `Selecciona un paquete de ${newAssignment.subject}` : 'Selecciona primero una materia'}</option>
+              {packagesForSubject.map(pkg => (
+                <option key={pkg.id} value={pkg.id}>{pkg.name}</option>
+              ))}
+            </select>
+            {selectedPackageId && (
+              <div className="text-xs text-gray-600 mt-2">
+                Se agregarán todas las tareas del paquete seleccionado al estudiante/materia indicados.
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Assignments List */}
+      {/* Listado de bancos creados */}
       {assignmentBanks.length > 0 && (
         <div className="space-y-4">
           <h3 className="font-medium text-gray-700">Asignaciones creadas:</h3>
-          {assignmentBanks.map((bank, bankIndex) => {
-            const student = students.find(s => s.id === bank.studentId);
-            return (
-              <div key={bankIndex} className="bg-white border rounded-lg p-4">
-                <h4 className="font-medium mb-2">{student?.name} - {bank.subject}</h4>
-                <div className="space-y-1">
-                  {bank.items.map((item, itemIndex) => (
-                    <div key={itemIndex} className="flex justify-between text-sm">
-                      <span>{item.title}</span>
-                      {item.weight && <span className="text-gray-500">Peso: {item.weight}</span>}
-                    </div>
-                  ))}
-                </div>
+          {assignmentBanks.map((bank, bankIndex) => (
+            <div key={bankIndex} className="bg-white border rounded-lg p-4">
+              <h4 className="font-medium mb-2">{bank.studentId} - {bank.subject}</h4>
+              <div className="space-y-1">
+                {bank.items.map((item, itemIndex) => (
+                  <div key={itemIndex} className="flex justify-between text-sm">
+                    <span>{item.title}</span>
+                    {item.weight && <span className="text-gray-500">Peso: {item.weight}</span>}
+                  </div>
+                ))}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Skip Modal */}
+      <div className="text-right">
+        <button onClick={() => setShowSkipModal(true)} className="text-sm text-gray-600 hover:text-gray-800 underline">
+          Omitir este paso
+        </button>
+      </div>
+
       {showSkipModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md mx-4" role="dialog" aria-modal="true">
             <h3 className="text-lg font-semibold mb-2">Lo puedes crear después</h3>
-            <p className="text-gray-600 mb-4">
-              Desde Planificación podrás crear, editar y asignar tareas.
-            </p>
+            <p className="text-gray-600 mb-4">Desde Planificación podrás crear, editar y asignar tareas.</p>
             <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setShowSkipModal(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmSkip}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Entendido
-              </button>
+              <button onClick={() => setShowSkipModal(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
+              <button onClick={() => { setShowSkipModal(false); onSkip(); }} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Entendido</button>
             </div>
           </div>
         </div>
@@ -778,7 +895,9 @@ export function OnboardingWizard({ onFinish }) {
         {/* Header */}
         <div className="border-b p-6">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-xl font-bold text-gray-900">Configuración inicial</h1>
+            <h2 className="text-2xl font-bold text-gray-800">¡Bienvenido a Genial Skills Homeschool!</h2>
+            <p className="text-gray-600">Configura tu hogar de aprendizaje en minutos.</p>
+            ,<div></div>
             <button
               onClick={() => {
                 if (confirm('¿Estás seguro de que quieres cerrar el asistente?')) {
