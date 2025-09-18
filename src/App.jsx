@@ -1182,7 +1182,7 @@ function App() {
           aria-label="Abrir menú"
         >
           <Menu className="w-5 h-5" />
-          <span className="text-sm">Menú</span>
+          <span className="text-sm"></span>
         </button>
 
           <img src={logo} alt="Genial Skills" className="h-8" />
