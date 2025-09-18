@@ -1,0 +1,65 @@
+
+/* Genial Skills - Responsive Modal Styles for react-modal */
+
+.gs-Modal__Overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35); /* soft dim */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;            /* gutter on small screens */
+  z-index: 50;
+}
+
+/* On very small devices give a little more padding to avoid edge clipping */
+@media (max-width: 360px) {
+  .gs-Modal__Overlay { padding: 12px; }
+}
+
+/* Let the body behind be scrollable if content is short; overlay scrolls when content exceeds viewport */
+.gs-Modal__Overlay:focus {
+  outline: none;
+}
+
+.gs-Modal__Content {
+  /* Reset react-modal positioning so we can use our own layout */
+  position: static !important;
+  inset: auto !important;
+
+  width: 100%;
+  max-width: 42rem;         /* ~672px by default */
+  max-height: 90vh;         /* keep within viewport */
+  overflow-y: auto;         /* inner scroll */
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow:
+    0 10px 15px -3px rgba(0,0,0,0.1),
+    0 4px 6px -2px rgba(0,0,0,0.05);
+  padding: 16px;
+}
+
+/* Spacing scales up a bit on tablets/desktop */
+@media (min-width: 768px) {
+  .gs-Modal__Overlay { padding: 24px; }
+  .gs-Modal__Content { padding: 20px; max-width: 48rem; } /* ~768px */
+}
+
+/* Size variants (optional) */
+.gs-Modal__Content.modal--sm { max-width: 28rem; } /* 448px */
+.gs-Modal__Content.modal--md { max-width: 42rem; } /* 672px */
+.gs-Modal__Content.modal--lg { max-width: 56rem; } /* 896px */
+.gs-Modal__Content.modal--xl { max-width: 72rem; } /* 1152px */
+
+/* Header/Footer helpers (optional) */
+.gs-Modal__Header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 12px; }
+.gs-Modal__Title { font-size: 1.125rem; font-weight: 600; color: #111827; } /* text-gray-900 */
+.gs-Modal__Close {
+  appearance:none; border:0; background:transparent; cursor:pointer;
+  color:#6B7280; /* gray-500 */
+}
+.gs-Modal__Close:hover { color:#111827; }
+
+.gs-Modal__Body { overflow: visible; }
+.gs-Modal__Footer { display:flex; gap:8px; justify-content:flex-end; margin-top: 16px; flex-wrap: wrap; }
