@@ -1177,13 +1177,18 @@ function App() {
         <div className="flex items-center space-x-4">
         {/* Botón MENÚ - SOLO móvil */}
         <button
-          className="md:hidden inline-flex items-center gap-2 px-3 py-2 border border-white/50 rounded-md"
-          onClick={() => setDrawerOpen(true)}
-          aria-label="Abrir menú"
-        >
-          <Menu className="w-5 h-5" />
-          <span className="text-sm"></span>
-        </button>
+  className="md:hidden inline-flex items-center gap-2 px-3 py-2 rounded-md
+             bg-transparent text-white
+             border-0 outline-none
+             focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0
+             active:outline-none"
+  onClick={() => setDrawerOpen(true)}
+  aria-label="Abrir menú"
+  style={{ WebkitTapHighlightColor: 'transparent' }}  // quita highlight azul en móvil
+>
+  <Menu className="w-5 h-5" />
+</button>
+
 
           <img src={logo} alt="Genial Skills" className="h-8" />
         </div>
