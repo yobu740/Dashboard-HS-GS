@@ -45,7 +45,7 @@ import planningIcon from './assets/NavMenu-icon-Planning.png'
 import portfolioIcon from './assets/NavMenu-icon-Portfolio.png'
 import communityIcon from './assets/NavMenu-icon-Community.png'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useNewOnboarding, NewOnboardingWizard, DashboardTour, WeeklyInsightsCard } from './NewOnboardingSystem.jsx'
 import CatalogFilters from './CatalogFilters.jsx'
 import StudentDetailModal from './StudentDetailModal.jsx'
