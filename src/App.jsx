@@ -29,8 +29,6 @@ import {
   Palette,
   Presentation,
   Calculator
-,
-  Menu
 } from 'lucide-react'
 import mariaAvatar from './assets/maria-avatar.png'
 import juanAvatar from './assets/juan-avatar.png'
@@ -47,19 +45,16 @@ import planningIcon from './assets/NavMenu-icon-Planning.png'
 import portfolioIcon from './assets/NavMenu-icon-Portfolio.png'
 import communityIcon from './assets/NavMenu-icon-Community.png'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { useNewOnboarding, DashboardTour, WeeklyInsightsCard } from './NewOnboardingSystem.jsx';
-import OnboardingWizard from './OnboardingWizard.jsx';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
+import { useNewOnboarding, NewOnboardingWizard, DashboardTour, WeeklyInsightsCard } from './NewOnboardingSystem.jsx'
 import CatalogFilters from './CatalogFilters.jsx'
 import StudentDetailModal from './StudentDetailModal.jsx'
 import './App.css'
-import './styles/drawer.css'
 
 // Progress Area Component
 const ProgressArea = () => {
   const { useMemo, useEffect } = React
   const [selectedStudent, setSelectedStudent] = useState("María González")
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedSubject, setSelectedSubject] = useState("Todas")
   const [selectedLevel, setSelectedLevel] = useState("")
   const [dateFrom, setDateFrom] = useState("2025-07-31")
@@ -327,7 +322,6 @@ const ProgressArea = () => {
 }
 
 function App() {
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [activeSection, setActiveSection] = useState('inicio')
   const [calendarView, setCalendarView] = useState('month') // 'month' or 'week'
   const [selectedEvent, setSelectedEvent] = useState(null)
@@ -1176,25 +1170,10 @@ function App() {
       {/* Header */}
       <header className="bg-slate-700 text-white px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
-        {/* Botón MENÚ - SOLO móvil */}
-        <button
-  className="md:hidden inline-flex items-center gap-2 px-3 py-2 rounded-md
-             bg-transparent text-white
-             border-0 outline-none
-             focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0
-             active:outline-none"
-  onClick={() => setDrawerOpen(true)}
-  aria-label="Abrir menú"
-  style={{ WebkitTapHighlightColor: 'transparent' }}  // quita highlight azul en móvil
->
-  <Menu className="w-5 h-5" />
-</button>
-
-
           <img src={logo} alt="Genial Skills" className="h-8" />
         </div>
         <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm" className="bg-transparent text-white border-white/70 hover:bg-transparent hover:text-white hover:border-white/90 focus:ring-0">
+          <Button variant="outline" size="sm" className="text-white border-white hover:bg-white hover:text-slate-700">
             <Bell className="w-4 h-4 mr-2" />
             Ayuda
           </Button>
@@ -1207,56 +1186,9 @@ function App() {
         </div>
       </header>
 
-      {/* Drawer móvil */}
-      {drawerOpen && (
-        <>
-          <div className="gs-Drawer__Overlay md:hidden" onClick={() => setDrawerOpen(false)} />
-          <aside className={`gs-Drawer__Panel md:hidden ${drawerOpen ? 'is-open' : ''}`}>
-            <nav className="p-3 space-y-1">
-              {menuItems.map((item) => {
-                const LucideIcon = item.lucideIcon;
-                const active = activeSection === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    data-menu={item.id}
-                    onClick={() => { setActiveSection(item.id); setDrawerOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                      active ? 'bg-yellow-700 text-white' : 'text-yellow-50 hover:bg-yellow-700 hover:text-white'
-                    }`}
-                  >
-                    {item.icon === 'svg' ? (
-                      <img 
-                        src={
-                          item.id === 'inicio' ? homeIcon :
-                          item.id === 'estudiantes' ? studentsIcon :
-                          item.id === 'mensajeria' ? messagesIcon :
-                          item.id === 'teams' ? teamsIcon :
-                          item.id === 'catalogo' ? catalogIcon :
-                          item.id === 'calendario' ? calendarIcon :
-                          item.id === 'planificacion' ? planningIcon :
-                          item.id === 'portafolio' ? portfolioIcon :
-                          item.id === 'comunidad' ? communityIcon : ''
-                        } 
-                        alt={item.label} 
-                        className="w-5 h-5"
-                      />
-                    ) : (
-                      <LucideIcon className="w-5 h-5" />
-                    )}
-                    <span className="text-sm font-medium">{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </aside>
-        </>
-      )}
-
-
       <div className="flex">
         {/* Sidebar */}
-        <aside className="hidden md:block w-32 min-h-screen" style={{backgroundColor: '#c0a267'}}>
+        <aside className="w-32 min-h-screen" style={{backgroundColor: '#c0a267'}}>
           <nav className="p-4">
             {menuItems.map((item) => {
               const LucideIcon = item.lucideIcon
@@ -1306,37 +1238,60 @@ function App() {
                 </p>
               </div>
 
-              {/* Student Cards */}
-              <div id="cards-hijos" className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {students.map((student) => (
-                  <Card key={student.id} className="hover:shadow-lg transition-shadow">
+              {/* Dashboard Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* Student Card - Left Column */}
+                <div className="lg:col-span-1">
+                  <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader className="text-center pb-4">
                       <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden">
                         <img 
-                          src={student.avatar} 
-                          alt={student.name}
+                          src={students[0].avatar} 
+                          alt={students[0].name}
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <CardTitle className="text-lg">{student.name}</CardTitle>
-                      <p className="text-sm text-gray-600">{student.grade}</p>
+                      <CardTitle className="text-lg">{students[0].name}</CardTitle>
+                      <p className="text-sm text-gray-600">{students[0].grade}</p>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-3">
-                        {Object.entries(student.progress).map(([subject, progress]) => (
-                          <div key={subject} className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span>{subject}</span>
-                              <span>{progress}%</span>
-                            </div>
-                            <Progress value={progress} className="h-2" />
+                      {/* Semicircular Progress Chart */}
+                      <div className="flex justify-center mb-6">
+                        <div className="relative w-32 h-16">
+                          <svg className="w-32 h-16" viewBox="0 0 128 64">
+                            {/* Background semicircle */}
+                            <path
+                              d="M 16 48 A 32 32 0 0 1 112 48"
+                              fill="none"
+                              stroke="#e5e7eb"
+                              strokeWidth="8"
+                            />
+                            {/* Progress semicircle */}
+                            <path
+                              d="M 16 48 A 32 32 0 0 1 112 48"
+                              fill="none"
+                              stroke="#3b82f6"
+                              strokeWidth="8"
+                              strokeDasharray={`${(81 * 150.8) / 100} 150.8`}
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          {/* Percentage in center */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-2xl font-bold text-gray-900">81%</span>
                           </div>
-                        ))}
+                        </div>
+                      </div>
+                      
+                      {/* Last Activity */}
+                      <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm font-medium text-gray-700 mb-1">Última actividad:</p>
+                        <p className="text-sm text-gray-600">Práctica lección Sistema Solar</p>
                       </div>
                       
                       {/* Badges */}
-                      <div className="mt-4 flex flex-wrap gap-1">
-                        {student.badges.map((badge, index) => (
+                      <div className="mb-4 flex flex-wrap gap-1">
+                        {students[0].badges.map((badge, index) => (
                           <Badge key={index} variant="secondary" className="text-xs">
                             <Award className="w-3 h-3 mr-1" />
                             {badge}
@@ -1345,10 +1300,10 @@ function App() {
                       </div>
 
                       <Button 
-                        className="w-full mt-4" 
+                        className="w-full" 
                         variant="outline"
                         onClick={() => {
-                          setSelectedStudent(student);
+                          setSelectedStudent(students[0]);
                           setShowStudentDetail(true);
                         }}
                       >
@@ -1356,57 +1311,136 @@ function App() {
                       </Button>
                     </CardContent>
                   </Card>
-                ))}
+                </div>
+
+                {/* Right Column - Alerts and Study Time */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Alerts and Recommendations */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <AlertTriangle className="w-5 h-5 mr-2 text-orange-500" />
+                        Alertas y Recomendaciones
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg">
+                          <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm">
+                              <strong>María</strong> tiene dificultad con fracciones. Te sugerimos aplicar refuerzo en Avanza.
+                            </p>
+                            <Button size="sm" className="mt-2">
+                              Asignar Refuerzo
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
+                          <Clock className="w-5 h-5 text-red-500 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm">
+                              <strong>Juan</strong> lleva 5 días sin entrar a Ciencias. Revisa su plan.
+                            </p>
+                            <Button size="sm" variant="outline" className="mt-2">
+                              Revisar Plan
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                          <AlertTriangle className="w-5 h-5 text-blue-500 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm">
+                              <strong>Juan</strong> ha sacado en dos ocasiones 70 en la lección de suma de fracciones. Le recomendamos esta lección básica de fracciones.
+                            </p>
+                            <Button size="sm" className="mt-2">
+                              Asignar Lección
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Study Time */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <TrendingUp className="w-5 h-5 mr-2" />
+                        Tiempo de Estudio (Últimos 7 días)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-2 font-medium text-gray-600">Estudiante</th>
+                              <th className="text-left py-2 font-medium text-gray-600">Materia</th>
+                              <th className="text-left py-2 font-medium text-gray-600">Horas</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="border-b">
+                              <td className="py-2">María González</td>
+                              <td className="py-2">Matemáticas</td>
+                              <td className="py-2">5h 30m</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="py-2">María González</td>
+                              <td className="py-2">Inglés</td>
+                              <td className="py-2">4h 15m</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="py-2">María González</td>
+                              <td className="py-2">Ciencias</td>
+                              <td className="py-2">3h 00m</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2">María González</td>
+                              <td className="py-2">Español</td>
+                              <td className="py-2">6h 00m</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
 
-              {/* Alerts and Recommendations */}
+              {/* Quick Actions */}
               <Card className="mb-6">
                 <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <AlertTriangle className="w-5 h-5 mr-2 text-orange-500" />
-                    Alertas y Recomendaciones
-                  </CardTitle>
+                  <CardTitle>Acciones Rápidas</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg">
-                      <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm">
-                          <strong>María</strong> tiene dificultad con fracciones. Te sugerimos aplicar refuerzo en Avanza.
-                        </p>
-                        <Button size="sm" className="mt-2">
-                          Asignar Refuerzo
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
-                      <Clock className="w-5 h-5 text-red-500 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm">
-                          <strong>Juan</strong> lleva 5 días sin entrar a Ciencias. Revisa su plan.
-                        </p>
-                        <Button size="sm" variant="outline" className="mt-2">
-                          Revisar Plan
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-                      <AlertTriangle className="w-5 h-5 text-blue-500 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm">
-                          <strong>Juan</strong> ha sacado en dos ocasiones 70 en la lección de suma de fracciones. Le recomendamos esta lección básica de fracciones.
-                        </p>
-                        <Button size="sm" className="mt-2">
-                          Asignar Lección
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Button className="h-16 flex flex-col items-center justify-center space-y-2">
+                      <BookOpen className="w-6 h-6" />
+                      <span>Aplicar Planificación</span>
+                    </Button>
+                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center space-y-2">
+                      <Target className="w-6 h-6" />
+                      <span>Asignar Quiz</span>
+                    </Button>
+                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center space-y-2">
+                      <Star className="w-6 h-6" />
+                      <span>Crear Recompensa</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="h-16 flex flex-col items-center justify-center space-y-2 bg-red-50 hover:bg-red-100 border-red-200"
+                      onClick={generatePDF}
+                    >
+                      <FileText className="w-6 h-6 text-red-600" />
+                      <span className="text-red-600">Exportar PDF</span>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Weekly Calendar */}
+              {/* Agenda Semanal y Calendario */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
@@ -1440,52 +1474,7 @@ function App() {
                   </CardContent>
                 </Card>
 
-                {/* Study Time Table */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <TrendingUp className="w-5 h-5 mr-2" />
-                      Tiempo de Estudio (Últimos 7 días)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-2 font-medium text-gray-600">Estudiante</th>
-                            <th className="text-left py-2 font-medium text-gray-600">Materia</th>
-                            <th className="text-left py-2 font-medium text-gray-600">Horas</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="border-b">
-                            <td className="py-2">María González</td>
-                            <td className="py-2">Matemáticas</td>
-                            <td className="py-2">5h 30m</td>
-                          </tr>
-                          <tr className="border-b">
-                            <td className="py-2">Juan Rodríguez</td>
-                            <td className="py-2">Inglés</td>
-                            <td className="py-2">4h 15m</td>
-                          </tr>
-                          <tr className="border-b">
-                            <td className="py-2">Sofía Martínez</td>
-                            <td className="py-2">Ciencias</td>
-                            <td className="py-2">3h 00m</td>
-                          </tr>
-                          <tr>
-                            <td className="py-2">María González</td>
-                            <td className="py-2">Español</td>
-                            <td className="py-2">6h 00m</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Quick Calendar */}
+                {/* Calendario */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
@@ -1549,36 +1538,7 @@ function App() {
                 </Card>
               </div>
 
-              {/* Quick Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Acciones Rápidas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Button className="h-16 flex flex-col items-center justify-center space-y-2">
-                      <BookOpen className="w-6 h-6" />
-                      <span>Aplicar Planificación</span>
-                    </Button>
-                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center space-y-2">
-                      <Target className="w-6 h-6" />
-                      <span>Asignar Quiz</span>
-                    </Button>
-                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center space-y-2">
-                      <Star className="w-6 h-6" />
-                      <span>Crear Recompensa</span>
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-16 flex flex-col items-center justify-center space-y-2 bg-red-50 hover:bg-red-100 border-red-200"
-                      onClick={generatePDF}
-                    >
-                      <FileText className="w-6 h-6 text-red-600" />
-                      <span className="text-red-600">Exportar PDF</span>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+
             </div>
           )}
 
@@ -2066,7 +2026,7 @@ function App() {
 
               {/* Event Modal */}
               {showEventModal && selectedEvent && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                   <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                     <div className="flex justify-between items-start mb-4">
                       <h3 className="text-lg font-semibold">Detalles de la Lección</h3>
@@ -3403,7 +3363,7 @@ function App() {
 
       {/* Assignment Modal */}
       {showAssignModal && selectedPlan && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">Asignar Plan: {selectedPlan.title}</h3>
             
@@ -3475,7 +3435,7 @@ function App() {
       )}
 
       {/* Onboarding System */}
-      {showWizard && <OnboardingWizard onFinish={completeWizard} />}
+      {showWizard && <NewOnboardingWizard onFinish={completeWizard} />}
       {showTour && <DashboardTour onComplete={completeTour} />}
       {showWeeklyInsights && <WeeklyInsightsCard onDismiss={dismissWeeklyInsights} />}
     </div>

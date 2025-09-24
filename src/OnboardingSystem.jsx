@@ -169,7 +169,7 @@ function StepMiniCalendar() {
     <div className="text-center">
       <Calendar className="w-16 h-16 text-purple-500 mx-auto mb-4" />
       <h3 className="text-2xl font-semibold mb-2">Ajusta tu calendario familiar</h3>
-      <p className="text-gray-600 mb-6">Decide los dias y las horas de estudio ajustado a tu rutina.</p>
+      <p className="text-gray-600 mb-6">Arrastra y suelta las lecciones para adaptarlas a tu rutina.</p>
       
       <div className="max-w-md mx-auto bg-gray-50 p-4 rounded-lg">
         <div className="grid grid-cols-7 gap-1 text-xs text-center mb-2">
