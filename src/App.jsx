@@ -45,7 +45,7 @@ import planningIcon from './assets/NavMenu-icon-Planning.png'
 import portfolioIcon from './assets/NavMenu-icon-Portfolio.png'
 import communityIcon from './assets/NavMenu-icon-Community.png'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
 import { useNewOnboarding, NewOnboardingWizard, DashboardTour, WeeklyInsightsCard } from './NewOnboardingSystem.jsx'
 import CatalogFilters from './CatalogFilters.jsx'
 import StudentDetailModal from './StudentDetailModal.jsx'
@@ -323,6 +323,7 @@ const ProgressArea = () => {
 
 function App() {
   const [activeSection, setActiveSection] = useState('inicio')
+  const [activeStudyTab, setActiveStudyTab] = useState('time') // 'time', 'lessons', 'assignments'
   const [calendarView, setCalendarView] = useState('month') // 'month' or 'week'
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [showEventModal, setShowEventModal] = useState(false)
@@ -572,7 +573,7 @@ function App() {
 </body>
 </html>
     `;
-    
+
     // Create and download the PDF
     const blob = new Blob([reportContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
@@ -664,6 +665,8 @@ function App() {
     }
   ]
 
+
+
   // Calendar data
   const calendarStudents = [
     {"id":"s1","name":"María","color":"#2979FF"},
@@ -751,6 +754,8 @@ function App() {
     }
   ])
 
+
+
   // Student Detail View Component
   const StudentDetailView = ({ student, onClose }) => {
     const [range, setRange] = useState("weekly")
@@ -803,7 +808,7 @@ function App() {
     ].filter(a => subjectFilter === "Todas" || a.subject === subjectFilter)
 
     const fmt = (iso) => new Date(iso).toLocaleString("es-PR", { timeZone: "America/Puerto_Rico", hour12: true })
-    const fmtDate = (iso) => new Date(iso).toLocaleDateString("es-PR")
+    const fmtDate = (iso) => new Date(iso).toLocaleDateString("es-PR", { timeZone: "America/Puerto_Rico" })
 
     const addNote = () => {
       const text = noteText.trim()
@@ -1164,7 +1169,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-slate-700 text-white px-6 py-4 flex flex-wrap items-center justify-between">
+      <header className="bg-slate-700 text-white px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <img src={logo} alt="Genial Skills" className="h-8" />
         </div>
@@ -1182,10 +1187,10 @@ function App() {
         </div>
       </header>
 
-      <div className="flex flex-col md:flex-row">
+      <div className="flex">
         {/* Sidebar */}
-        <aside className="w-full md:w-32 md:min-h-screen" style={{backgroundColor: '#c0a267'}}>
-          <nav className="p-4 grid grid-cols-3 gap-2 md:block">
+        <aside className="w-32 min-h-screen" style={{backgroundColor: '#c0a267'}}>
+          <nav className="p-4">
             {menuItems.map((item) => {
               const LucideIcon = item.lucideIcon
               return (
@@ -1193,7 +1198,7 @@ function App() {
                   key={item.id}
                   data-menu={item.id}
                   onClick={() => setActiveSection(item.id)}
-                  className={`w-full flex flex-col items-center justify-center px-2 py-3 mb-0 md:mb-2 rounded-lg transition-colors ${
+                  className={`w-full flex flex-col items-center justify-center px-2 py-3 mb-2 rounded-lg transition-colors ${
                     activeSection === item.id 
                       ? 'bg-yellow-700 text-white' 
                       : 'text-yellow-100 hover:bg-yellow-700 hover:text-white'
@@ -1234,107 +1239,351 @@ function App() {
                 </p>
               </div>
 
-              {/* Student Cards */}
-              <div id="cards-hijos" className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {students.map((student) => (
-                  <Card key={student.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="text-center pb-4">
-                      <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden">
-                        <img 
-                          src={student.avatar} 
-                          alt={student.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <CardTitle className="text-lg">{student.name}</CardTitle>
-                      <p className="text-sm text-gray-600">{student.grade}</p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {Object.entries(student.progress).map(([subject, progress]) => (
-                          <div key={subject} className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span>{subject}</span>
-                              <span>{progress}%</span>
-                            </div>
-                            <Progress value={progress} className="h-2" />
+              {/* Dashboard Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {/* Enhanced Student Card with Integrated Alerts - Left Column */}
+                <div className="lg:col-span-1">
+                  <Card className="hover:shadow-lg transition-shadow h-full">
+                    <CardContent className="space-y-6">
+                      {/* Student Info and Progress Chart - Side by Side */}
+                      <div className="flex items-center space-x-6">
+                        {/* Left: Photo and Info */}
+                        <div className="flex flex-col items-center space-y-3">
+                          <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-blue-100">
+                            <img 
+                              src={students[0].avatar} 
+                              alt={students[0].name}
+                              className="w-full h-full object-cover"
+                            />
                           </div>
-                        ))}
+                          <div className="text-center">
+                            <h3 className="text-lg font-semibold text-gray-900">{students[0].name}</h3>
+                            <p className="text-sm text-gray-600">{students[0].grade}</p>
+                          </div>
+                        </div>
+
+                        {/* Right: Progress Chart */}
+                        <div className="flex-1 flex justify-center">
+                          <div className="relative w-24 h-24">
+                            <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+                              {/* Background circle */}
+                              <circle
+                                cx="50"
+                                cy="50"
+                                r="40"
+                                fill="none"
+                                stroke="#e5e7eb"
+                                strokeWidth="8"
+                              />
+                              {/* Progress circle with gradient */}
+                              <defs>
+                                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                  <stop offset="0%" stopColor="#3b82f6" />
+                                  <stop offset="50%" stopColor="#1d4ed8" />
+                                  <stop offset="100%" stopColor="#1e40af" />
+                                </linearGradient>
+                              </defs>
+                              <circle
+                                cx="50"
+                                cy="50"
+                                r="40"
+                                fill="none"
+                                stroke="url(#progressGradient)"
+                                strokeWidth="8"
+                                strokeDasharray={`${(81 * 251.2) / 100} 251.2`}
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                            {/* Enhanced percentage display */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className="text-xl font-bold text-gray-900">81%</span>
+                              <span className="text-xs text-gray-600 font-medium">Promedio</span>
+                              <span className="text-xs text-gray-500">5 clases</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Last Activity */}
+                      <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                        <p className="text-sm font-medium text-blue-800 mb-2">Última actividad:</p>
+                        <div className="space-y-1 text-sm text-blue-700">
+                          <p>• Práctica lección Sistema Solar - <span className="font-medium">Ciencias</span></p>
+                          <p>• Completó lección de Narración y descripción - <span className="font-medium">Español</span></p>
+                          <p>• Completó lección Courtesy Expressions - <span className="font-medium">Inglés</span></p>
+                          <p>• Completó lección El calendario - <span className="font-medium">Matemáticas</span></p>
+                        </div>
                       </div>
                       
                       {/* Badges */}
-                      <div className="mt-4 flex flex-wrap gap-1">
-                        {student.badges.map((badge, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            <Award className="w-3 h-3 mr-1" />
-                            {badge}
-                          </Badge>
-                        ))}
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium">
+                          🌟 Lectora Estrella
+                        </span>
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                          🔢 Matemática Genial
+                        </span>
+                      </div>
+
+                      {/* Personalized Alerts Section */}
+                      <div className="border-t pt-4">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                          <AlertTriangle className="w-4 h-4 mr-2 text-orange-500" />
+                          Alertas Personalizadas para María
+                        </h4>
+                        <div className="space-y-3">
+                          <div className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg border-l-4 border-orange-400">
+                            <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm">
+                                <strong>María</strong> tiene dificultad con fracciones. Te sugerimos aplicar refuerzo.
+                              </p>
+                              <Button size="sm" className="mt-2 h-7 text-xs">
+                                Asignar Refuerzo
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
+                            <Clock className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm">
+                                <strong>María</strong> lleva 3 días sin entrar a Ciencias. Revisa su plan.
+                              </p>
+                              <Button size="sm" variant="outline" className="mt-2 h-7 text-xs">
+                                Revisar Plan
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
                       <Button 
-                        className="w-full mt-4" 
+                        className="w-full" 
                         variant="outline"
                         onClick={() => {
-                          setSelectedStudent(student);
+                          setSelectedStudent(students[0]);
                           setShowStudentDetail(true);
                         }}
                       >
-                        Ver Detalle
+                        Ver Detalle Completo
                       </Button>
                     </CardContent>
                   </Card>
-                ))}
+                </div>
+
+                {/* Right Column - Tabbed Study Information */}
+                <div className="lg:col-span-1">
+                  <Card className="h-full">
+                    <CardContent className="p-0">
+                      {/* Tab Navigation */}
+                      <div className="border-b">
+                        <nav className="flex space-x-8 px-6 pt-6">
+                          <button
+                            onClick={() => setActiveStudyTab('time')}
+                            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                              activeStudyTab === 'time'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                          >
+                            Tiempo de Estudio
+                          </button>
+                          <button
+                            onClick={() => setActiveStudyTab('lessons')}
+                            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                              activeStudyTab === 'lessons'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                          >
+                            Lecciones Asignadas
+                          </button>
+                          <button
+                            onClick={() => setActiveStudyTab('assignments')}
+                            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                              activeStudyTab === 'assignments'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                            }`}
+                          >
+                            Asignaciones
+                          </button>
+                        </nav>
+                      </div>
+
+                      {/* Tab Content */}
+                      <div className="p-6">
+                        {activeStudyTab === 'time' && (
+                          <div>
+                            <h3 className="text-lg font-semibold mb-4 flex items-center">
+                              <TrendingUp className="w-5 h-5 mr-2" />
+                              Últimos 7 días
+                            </h3>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b">
+                                    <th className="text-left py-2 font-medium text-gray-600">Materia</th>
+                                    <th className="text-left py-2 font-medium text-gray-600">Horas</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr className="border-b">
+                                    <td className="py-2">Matemáticas</td>
+                                    <td className="py-2">5h 30m</td>
+                                  </tr>
+                                  <tr className="border-b">
+                                    <td className="py-2">Inglés</td>
+                                    <td className="py-2">4h 15m</td>
+                                  </tr>
+                                  <tr className="border-b">
+                                    <td className="py-2">Ciencias</td>
+                                    <td className="py-2">3h 00m</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="py-2">Español</td>
+                                    <td className="py-2">6h 00m</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+
+                        {activeStudyTab === 'lessons' && (
+                          <div>
+                            <h3 className="text-lg font-semibold mb-4 flex items-center">
+                              <BookOpen className="w-5 h-5 mr-2" />
+                              Lecciones de 2do Grado
+                            </h3>
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                  <p className="font-medium text-sm">Los números del 1 al 100</p>
+                                  <p className="text-xs text-gray-600">Matemáticas • 25 min</p>
+                                </div>
+                                <Button size="sm" variant="outline">Ver lección</Button>
+                              </div>
+                              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                  <p className="font-medium text-sm">Partes del cuerpo humano</p>
+                                  <p className="text-xs text-gray-600">Ciencias • 30 min</p>
+                                </div>
+                                <Button size="sm" variant="outline">Ver lección</Button>
+                              </div>
+                              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                  <p className="font-medium text-sm">Lectura comprensiva: La familia</p>
+                                  <p className="text-xs text-gray-600">Español • 20 min</p>
+                                </div>
+                                <Button size="sm" variant="outline">Ver lección</Button>
+                              </div>
+                              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                  <p className="font-medium text-sm">Colors and Shapes</p>
+                                  <p className="text-xs text-gray-600">Inglés • 15 min</p>
+                                </div>
+                                <Button size="sm" variant="outline">Ver lección</Button>
+                              </div>
+                              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                  <p className="font-medium text-sm">Los animales domésticos</p>
+                                  <p className="text-xs text-gray-600">Ciencias • 25 min</p>
+                                </div>
+                                <Button size="sm" variant="outline">Ver lección</Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {activeStudyTab === 'assignments' && (
+                          <div>
+                            <h3 className="text-lg font-semibold mb-4 flex items-center">
+                              <FileText className="w-5 h-5 mr-2" />
+                              Asignaciones
+                            </h3>
+                            
+                            {/* Pending Assignments */}
+                            <div className="mb-6">
+                              <h4 className="text-sm font-semibold text-orange-600 mb-3">Pendientes (2)</h4>
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border-l-4 border-orange-400">
+                                  <div>
+                                    <p className="font-medium text-sm">Proyecto: Mi familia</p>
+                                    <p className="text-xs text-gray-600">Español • Vence: 15 Oct 2024</p>
+                                  </div>
+                                  <Button size="sm" variant="outline">Ver asignación</Button>
+                                </div>
+                                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border-l-4 border-orange-400">
+                                  <div>
+                                    <p className="font-medium text-sm">Ejercicios de suma y resta</p>
+                                    <p className="text-xs text-gray-600">Matemáticas • Vence: 18 Oct 2024</p>
+                                  </div>
+                                  <Button size="sm" variant="outline">Ver asignación</Button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Completed Assignments */}
+                            <div>
+                              <h4 className="text-sm font-semibold text-green-600 mb-3">Completadas (2)</h4>
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
+                                  <div>
+                                    <p className="font-medium text-sm">Experimento: Estados del agua</p>
+                                    <p className="text-xs text-gray-600">Ciencias • Completado: 10 Oct 2024</p>
+                                  </div>
+                                  <Button size="sm" className="bg-green-600 hover:bg-green-700">Evaluar asignación</Button>
+                                </div>
+                                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
+                                  <div>
+                                    <p className="font-medium text-sm">Redacción: Mi mascota favorita</p>
+                                    <p className="text-xs text-gray-600">Español • Completado: 8 Oct 2024</p>
+                                  </div>
+                                  <Button size="sm" className="bg-green-600 hover:bg-green-700">Evaluar asignación</Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
 
-              {/* Alerts and Recommendations */}
+              {/* Quick Actions */}
               <Card className="mb-6">
                 <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <AlertTriangle className="w-5 h-5 mr-2 text-orange-500" />
-                    Alertas y Recomendaciones
-                  </CardTitle>
+                  <CardTitle>Acciones Rápidas</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg">
-                      <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm">
-                          <strong>María</strong> tiene dificultad con fracciones. Te sugerimos aplicar refuerzo en Avanza.
-                        </p>
-                        <Button size="sm" className="mt-2">
-                          Asignar Refuerzo
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
-                      <Clock className="w-5 h-5 text-red-500 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm">
-                          <strong>Juan</strong> lleva 5 días sin entrar a Ciencias. Revisa su plan.
-                        </p>
-                        <Button size="sm" variant="outline" className="mt-2">
-                          Revisar Plan
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-                      <AlertTriangle className="w-5 h-5 text-blue-500 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm">
-                          <strong>Juan</strong> ha sacado en dos ocasiones 70 en la lección de suma de fracciones. Le recomendamos esta lección básica de fracciones.
-                        </p>
-                        <Button size="sm" className="mt-2">
-                          Asignar Lección
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Button className="h-16 flex flex-col items-center justify-center space-y-2">
+                      <BookOpen className="w-6 h-6" />
+                      <span>Aplicar Planificación</span>
+                    </Button>
+                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center space-y-2">
+                      <Target className="w-6 h-6" />
+                      <span>Asignar Quiz</span>
+                    </Button>
+                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center space-y-2">
+                      <Star className="w-6 h-6" />
+                      <span>Crear Recompensa</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="h-16 flex flex-col items-center justify-center space-y-2 bg-red-50 hover:bg-red-100 border-red-200"
+                      onClick={generatePDF}
+                    >
+                      <FileText className="w-6 h-6 text-red-600" />
+                      <span className="text-red-600">Exportar PDF</span>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Weekly Calendar */}
+              {/* Agenda Semanal y Calendario */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
@@ -1368,52 +1617,7 @@ function App() {
                   </CardContent>
                 </Card>
 
-                {/* Study Time Table */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <TrendingUp className="w-5 h-5 mr-2" />
-                      Tiempo de Estudio (Últimos 7 días)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-2 font-medium text-gray-600">Estudiante</th>
-                            <th className="text-left py-2 font-medium text-gray-600">Materia</th>
-                            <th className="text-left py-2 font-medium text-gray-600">Horas</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="border-b">
-                            <td className="py-2">María González</td>
-                            <td className="py-2">Matemáticas</td>
-                            <td className="py-2">5h 30m</td>
-                          </tr>
-                          <tr className="border-b">
-                            <td className="py-2">Juan Rodríguez</td>
-                            <td className="py-2">Inglés</td>
-                            <td className="py-2">4h 15m</td>
-                          </tr>
-                          <tr className="border-b">
-                            <td className="py-2">Sofía Martínez</td>
-                            <td className="py-2">Ciencias</td>
-                            <td className="py-2">3h 00m</td>
-                          </tr>
-                          <tr>
-                            <td className="py-2">María González</td>
-                            <td className="py-2">Español</td>
-                            <td className="py-2">6h 00m</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Quick Calendar */}
+                {/* Calendario */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
@@ -1477,43 +1681,14 @@ function App() {
                 </Card>
               </div>
 
-              {/* Quick Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Acciones Rápidas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Button className="h-16 flex flex-col items-center justify-center space-y-2">
-                      <BookOpen className="w-6 h-6" />
-                      <span>Aplicar Planificación</span>
-                    </Button>
-                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center space-y-2">
-                      <Target className="w-6 h-6" />
-                      <span>Asignar Quiz</span>
-                    </Button>
-                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center space-y-2">
-                      <Star className="w-6 h-6" />
-                      <span>Crear Recompensa</span>
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="h-16 flex flex-col items-center justify-center space-y-2 bg-red-50 hover:bg-red-100 border-red-200"
-                      onClick={generatePDF}
-                    >
-                      <FileText className="w-6 h-6 text-red-600" />
-                      <span className="text-red-600">Exportar PDF</span>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+
             </div>
           )}
 
           {/* Catálogo Section */}
           {activeSection === 'catalogo' && (
             <div className="space-y-6">
-              <div className="flex flex-wrap justify-between items-center mb-6">
+              <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-gray-900">Catálogo de lecciones</h1>
                 <Button variant="outline" size="sm" className="text-gray-600">
                   <BookOpen className="w-4 h-4 mr-2" />
@@ -1757,7 +1932,7 @@ function App() {
           {/* Calendar Section */}
           {activeSection === 'calendario' && (
             <div className="space-y-6">
-              <div className="flex flex-wrap justify-between items-center mb-6">
+              <div className="flex justify-between items-center mb-6">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">Calendario Académico</h1>
                   <p className="text-gray-600">Gestiona las lecciones asignadas a tus estudiantes</p>
@@ -1863,7 +2038,8 @@ function App() {
                         const dayEvents = calendarEvents.filter(event => {
                           const eventDate = new Date(event.start);
                           const eventDay = eventDate.getDate();
-                          const isVisible = studentFilters[event.studentId] && (subjectFilter === 'all' || event.subject === subjectFilter);
+                          const isVisible = studentFilters[event.studentId] && 
+                                          (subjectFilter === 'all' || event.subject === subjectFilter);
                           return eventDay === day && isVisible;
                         });
                         
@@ -1921,71 +2097,70 @@ function App() {
                       <div className="text-center font-semibold text-gray-700">
                         Semana del 15 - 21 de Septiembre, 2025
                       </div>
-                      <div className="overflow-x-auto">
-                        <div className="grid grid-cols-8 gap-2">
-                          <div className="font-semibold text-gray-600">Hora</div>
-                          {['Lun 15', 'Mar 16', 'Mié 17', 'Jue 18', 'Vie 19', 'Sáb 20', 'Dom 21'].map(day => (
-                            <div key={day} className="text-center font-semibold text-gray-600 p-2 border-b">
-                              {day}
-                            </div>
-                          ))}
-                          
-                          {/* Time slots */}
-                          {Array.from({ length: 12 }, (_, i) => {
-                            const hour = i + 8; // 8 AM to 7 PM
-                            return (
-                              <React.Fragment key={hour}>
-                                <div className="text-sm text-gray-500 p-2">
-                                  {hour}:00
-                                </div>
-                                {Array.from({ length: 7 }, (_, dayIndex) => {
-                                  const dayDate = 15 + dayIndex;
-                                  const dayEvents = calendarEvents.filter(event => {
-                                    const eventDate = new Date(event.start);
-                                    const eventDay = eventDate.getDate();
-                                    const eventHour = eventDate.getHours();
-                                    const isVisible = studentFilters[event.studentId] && (subjectFilter === 'all' || event.subject === subjectFilter);
-                                    return eventDay === dayDate && eventHour === hour && isVisible;
-                                  });
-                                  
-                                  return (
-                                    <div key={dayIndex} className="min-h-[60px] p-1 border border-gray-100">
-                                      {dayEvents.map(event => {
-                                        const student = calendarStudents.find(s => s.id === event.studentId);
-                                        return (
-                                          <div
-                                            key={event.id}
-                                            className={`text-xs p-2 rounded cursor-pointer transition-all hover:shadow-md ${
-                                              event.status === 'completed' ? 'opacity-60' : ''
-                                            } ${
-                                              event.status === 'in_progress' ? 'border-l-4 border-yellow-400' : ''
-                                            }`}
-                                            style={{ 
-                                              backgroundColor: student?.color + '20',
-                                              borderColor: event.status === 'assigned' ? student?.color : undefined,
-                                              borderWidth: event.status === 'assigned' ? '2px' : undefined
-                                            }}
-                                            onClick={() => {
-                                              setSelectedEvent(event);
-                                              setShowEventModal(true);
-                                            }}
-                                          >
-                                            <div className="flex items-center space-x-1">
-                                              <span>{event.icon}</span>
-                                              <span className="truncate">{event.title}</span>
-                                              {event.status === 'completed' && <span>✓</span>}
-                                            </div>
-                                            <div className="text-gray-600">{student?.name}</div>
+                      <div className="grid grid-cols-8 gap-2">
+                        <div className="font-semibold text-gray-600">Hora</div>
+                        {['Lun 15', 'Mar 16', 'Mié 17', 'Jue 18', 'Vie 19', 'Sáb 20', 'Dom 21'].map(day => (
+                          <div key={day} className="text-center font-semibold text-gray-600 p-2 border-b">
+                            {day}
+                          </div>
+                        ))}
+                        
+                        {/* Time slots */}
+                        {Array.from({ length: 12 }, (_, i) => {
+                          const hour = i + 8; // 8 AM to 7 PM
+                          return (
+                            <React.Fragment key={hour}>
+                              <div className="text-sm text-gray-500 p-2">
+                                {hour}:00
+                              </div>
+                              {Array.from({ length: 7 }, (_, dayIndex) => {
+                                const dayDate = 15 + dayIndex;
+                                const dayEvents = calendarEvents.filter(event => {
+                                  const eventDate = new Date(event.start);
+                                  const eventDay = eventDate.getDate();
+                                  const eventHour = eventDate.getHours();
+                                  const isVisible = studentFilters[event.studentId] && 
+                                                  (subjectFilter === 'all' || event.subject === subjectFilter);
+                                  return eventDay === dayDate && eventHour === hour && isVisible;
+                                });
+                                
+                                return (
+                                  <div key={dayIndex} className="min-h-[60px] p-1 border border-gray-100">
+                                    {dayEvents.map(event => {
+                                      const student = calendarStudents.find(s => s.id === event.studentId);
+                                      return (
+                                        <div
+                                          key={event.id}
+                                          className={`text-xs p-2 rounded cursor-pointer transition-all hover:shadow-md ${
+                                            event.status === 'completed' ? 'opacity-60' : ''
+                                          } ${
+                                            event.status === 'in_progress' ? 'border-l-4 border-yellow-400' : ''
+                                          }`}
+                                          style={{ 
+                                            backgroundColor: student?.color + '20',
+                                            borderColor: event.status === 'assigned' ? student?.color : undefined,
+                                            borderWidth: event.status === 'assigned' ? '2px' : undefined
+                                          }}
+                                          onClick={() => {
+                                            setSelectedEvent(event);
+                                            setShowEventModal(true);
+                                          }}
+                                        >
+                                          <div className="flex items-center space-x-1">
+                                            <span>{event.icon}</span>
+                                            <span className="truncate">{event.title}</span>
+                                            {event.status === 'completed' && <span>✓</span>}
                                           </div>
-                                        );
-                                      })}
-                                    </div>
-                                  );
-                                })}
-                              </React.Fragment>
-                            );
-                          })}
-                        </div>
+                                          <div className="text-gray-600">{student?.name}</div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })}
+                            </React.Fragment>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -2256,7 +2431,7 @@ function App() {
           {activeSection === 'planificacion' && showCustomPlanning && (
             <div className="space-y-6">
               {/* Header */}
-              <div className="flex flex-wrap justify-between items-center mb-6">
+              <div className="flex justify-between items-center mb-6">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">Planificación personalizada</h1>
                 </div>
@@ -2403,7 +2578,7 @@ function App() {
                     </nav>
 
                     {/* Toolbar */}
-                    <div className="flex flex-wrap justify-between items-center mb-6">
+                    <div className="flex justify-between items-center mb-6">
                       <h2 className="text-xl font-semibold text-gray-900">Lecciones</h2>
                       <div className="flex gap-3">
                         <select className="bg-white border border-gray-300 text-gray-700 rounded px-3 py-2 text-sm">
@@ -2476,7 +2651,7 @@ function App() {
           {showPlanningModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
-                <div className="flex flex-wrap justify-between items-center p-6 border-b border-gray-200">
+                <div className="flex justify-between items-center p-6 border-b border-gray-200">
                   <h3 className="text-xl font-semibold text-gray-900">Nuevo elemento</h3>
                   <button 
                     onClick={() => setShowPlanningModal(false)}
@@ -3411,3 +3586,4 @@ function App() {
 }
 
 export default App
+
