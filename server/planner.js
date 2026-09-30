@@ -5,14 +5,19 @@
 // 2. Ask an LLM (via OpenRouter) to act as a homeschool curriculum advisor: pick and sequence
 //    lessons *by id* from that catalogue and set a weekly rhythm per subject.
 // 3. Validate every id against the catalogue (anything invented is dropped),
-//    then lay the lessons onto the family's calendar with shared/scheduler.js.
+//    then lay the lessons onto the family's calendar with shared/scheduler.js
+//    (each lesson: learn → practice → exam, plus weekly skills reviews).
+// 4. When the family opts in, align with the DEPR grade expectations: the
+//    model sees which expectations each lesson covers and is asked to cover
+//    as many as possible; the plan ships the expectations for the coverage UI.
 //
 // With no OpenRouter key the heuristic planner below produces the same
 // plan shape, so the product flow works end to end in any environment.
 
 import { catalogFor, athenasMode } from './athenas.js'
 import { SUBJECTS, GRADES, gradeLabel } from '../shared/subjects.js'
-import { buildSchedule, fitQuotas, weeklyCapacity, slotsPerDay, WEEKDAY_LABELS } from '../shared/scheduler.js'
+import { buildSchedule, fitQuotas, lessonCapacity, weeklyCapacity, slotsPerDay, WEEKDAY_LABELS } from '../shared/scheduler.js'
+import { gradeExpectations, lessonExpectations } from './depr.js'
 
 // OpenRouter (same provider as Genial Skills Maestro). Any model with
 // structured-output support works; override with OPENROUTER_MODEL.
@@ -78,7 +83,8 @@ Cómo decidir:
 - Si una materia "está avanzado", puedes cerrar con lecciones del grado siguiente (vienen marcadas) y darle un ritmo normal.
 - Usa los intereses y el estilo de aprendizaje del niño para priorizar temas y para los consejos, sin inventar contenido de las lecciones.
 - La suma de sesiones por semana de todas las materias no puede pasar de la capacidad semanal indicada. Puedes dejar algo de capacidad libre si el enfoque de la familia es flexible.
-- Cada sesión del calendario consume una lección. Para cada materia, lessonIds debe tener EXACTAMENTE sesiones por semana × semanas del periodo lecciones (o todas las disponibles si no alcanzan). Una lista corta deja al niño con semanas de solo repaso. Ejemplo: 4 sesiones/semana durante 9 semanas = 36 lecciones.
+- Cada lección se trabaja en TRES sesiones en días distintos: aprender (concepto, vocabulario, ejemplos), practicar y examen. Además, cada materia tiene una sesión semanal de repaso de destrezas. Por eso el número de lecciones por materia es la "capacidad de lecciones" indicada en el perfil según las sesiones por semana que elijas. lessonIds debe tener EXACTAMENTE esa cantidad (o todas las disponibles si no alcanzan).
+- Si el perfil indica alineación con el DEPR, cada lección trae las expectativas del grado que trabaja (códigos como 3.N.1). Prioriza cubrir la mayor cantidad posible de expectativas distintas del grado y de todos sus dominios; evita elegir varias lecciones que repitan exactamente las mismas expectativas si hay alternativas. Menciona en el resumen que el plan sigue los estándares del Departamento de Educación.
 - Escribe todo el texto en español, dirigido al padre o madre, en tono cálido, claro y práctico. Sin jerga educativa innecesaria.`
 
 function describeProfile(profile, capacity, perDay) {
@@ -98,11 +104,15 @@ function describeProfile(profile, capacity, perDay) {
     `Horario: ${days}; ${schedule.minutesPerDay} minutos al día; sesiones de ${schedule.minutesPerLesson} minutos; hasta ${perDay} sesiones por día.`,
     `Periodo: ${schedule.weeks} semanas a partir de ${schedule.startDate}.`,
     `Capacidad semanal total: ${capacity} sesiones.`,
+    `Capacidad de lecciones por materia en ${schedule.weeks} semanas, según sesiones por semana: ${[1, 2, 3, 4, 5, 6].map(q => `${q} ses/sem → ${lessonCapacity(q, Number(schedule.weeks) || 12)} lecciones`).join('; ')}.`,
+    profile.depr
+      ? 'Alineación con el DEPR: SÍ. La familia quiere cumplir con las expectativas de grado del Departamento de Educación de Puerto Rico.'
+      : 'Alineación con el DEPR: no solicitada. Prioriza las necesidades e intereses del niño.',
   )
   return lines.join('\n')
 }
 
-function describeCatalog(catalog, childLevel) {
+function describeCatalog(catalog, childLevel, depr) {
   const blocks = []
   for (const [key, entry] of Object.entries(catalog)) {
     const name = SUBJECTS[key].name
@@ -112,9 +122,16 @@ function describeCatalog(catalog, childLevel) {
     }
     const rows = entry.lessons.map(l => {
       const tag = l.levelCode === childLevel ? '' : ` [puente: ${gradeLabel(l.levelCode)}]`
-      return `${l.id} | ${l.title}${tag}`
+      const std = depr && l.standards?.length ? ` | ${l.standards.join(', ')}` : ''
+      return `${l.id} | ${l.title}${tag}${std}`
     })
-    blocks.push(`## ${name} (${key}) — ${entry.lessons.length} lecciones\nID | Título\n${rows.join('\n')}`)
+    let block = `## ${name} (${key}) — ${entry.lessons.length} lecciones\nID | Título${depr ? ' | Expectativas DEPR' : ''}\n${rows.join('\n')}`
+    const grade = depr && gradeExpectations(key, childLevel)
+    if (grade) {
+      block += `\n\nExpectativas DEPR de ${name}, ${gradeLabel(childLevel)} (${grade.expectations.length}):\n` +
+        grade.expectations.map(e => `${e.code} — ${e.text.slice(0, 140)}`).join('\n')
+    }
+    blocks.push(block)
   }
   return blocks.join('\n\n')
 }
@@ -150,7 +167,7 @@ async function planWithAI(profile, catalog, capacity, perDay) {
 ${describeProfile(profile, capacity, perDay)}
 
 # Catálogo de Athenas
-${describeCatalog(catalog, profile.child.level)}
+${describeCatalog(catalog, profile.child.level, profile.depr)}
 
 Diseña el plan. Responde solo con el JSON.`,
         },
@@ -180,7 +197,7 @@ function planHeuristically(profile, catalog, capacity) {
 
   const subjects = active.map(s => {
     const perWeek = Math.max(1, Math.floor((usable * (weight[s.support] || 1)) / totalWeight))
-    const slots = perWeek * weeks
+    const slots = lessonCapacity(perWeek, weeks)
     const all = catalog[s.key].lessons
     const own = all.filter(l => l.levelCode === profile.child.level)
     const before = all.filter(l => l.levelCode !== profile.child.level && all.indexOf(l) < all.indexOf(own[0]))
@@ -250,7 +267,7 @@ function normalizePlan(raw, profile, catalog, capacity) {
       available: entry.lessons.length,
       lessons: ids.map(id => {
         const l = index.get(id)
-        return { id: l.id, title: l.title, levelCode: l.levelCode, subjectCode: l.subjectCode }
+        return { id: l.id, title: l.title, levelCode: l.levelCode, subjectCode: l.subjectCode, standards: l.standards }
       }),
     })
   }
@@ -265,17 +282,19 @@ function normalizePlan(raw, profile, catalog, capacity) {
 }
 
 /**
- * Models often pick fewer lessons than the calendar has sessions. Fill each
- * subject up to quota × weeks with the remaining catalogue lessons in order —
+ * Models often pick fewer lessons than the calendar has room for. Fill each
+ * subject up to its lesson capacity with the remaining catalogue lessons —
  * the child's own grade first, then the next grade (never extra bridge
  * lessons from the grade below, which are capped at ~30% of the subject).
+ * With DEPR alignment on, lessons that cover still-uncovered expectations go
+ * first.
  */
 function topUpLessons(plan, profile, catalog, capacity) {
   const weeks = Number(profile.schedule.weeks) || 12
   const quotas = fitQuotas(plan.subjects, capacity)
   const below = new Set(profile.subjects.filter(s => s.support === 'refuerzo').map(s => s.key))
   plan.subjects.forEach((subject, i) => {
-    const target = quotas[i] * weeks
+    const target = lessonCapacity(quotas[i], weeks)
     // Bridge lessons from the grade below: keep the model's order, cap at ~30%.
     const bridgeCap = Math.ceil(target * 0.3)
     let bridges = 0
@@ -290,10 +309,15 @@ function topUpLessons(plan, profile, catalog, capacity) {
     }
     const chosen = new Set(subject.lessons.map(l => l.id))
     const pool = catalog[subject.key].lessons.filter(l => !chosen.has(l.id))
-    const own = pool.filter(l => l.levelCode === profile.child.level)
+    let own = pool.filter(l => l.levelCode === profile.child.level)
+    if (profile.depr) {
+      const covered = new Set(subject.lessons.flatMap(l => l.standards || []))
+      const gain = l => (l.standards || []).filter(c => !covered.has(c)).length
+      own = own.map((l, order) => ({ l, order, gain: gain(l) })).sort((a, b) => (b.gain > 0) - (a.gain > 0) || a.order - b.order).map(x => x.l)
+    }
     const other = below.has(subject.key) ? [] : pool.filter(l => l.levelCode !== profile.child.level)
     const extra = [...own, ...other].slice(0, target - subject.lessons.length)
-    subject.lessons.push(...extra.map(l => ({ id: l.id, title: l.title, levelCode: l.levelCode, subjectCode: l.subjectCode })))
+    subject.lessons.push(...extra.map(l => ({ id: l.id, title: l.title, levelCode: l.levelCode, subjectCode: l.subjectCode, standards: l.standards })))
   })
 }
 
@@ -308,6 +332,10 @@ export async function generatePlan(profile) {
   const perDay = slotsPerDay(schedule)
 
   const catalog = await catalogFor({ level: profile.child.level, language: profile.child.language, subjects: profile.subjects })
+  // DEPR expectations each lesson works (child's grade only; bridge lessons count for their own grade).
+  for (const entry of Object.values(catalog)) {
+    entry.lessons = entry.lessons.map(l => ({ ...l, standards: lessonExpectations(l.id, profile.child.level) }))
+  }
 
   let raw
   let source = 'ai'
@@ -326,8 +354,18 @@ export async function generatePlan(profile) {
 
   const plan = normalizePlan(raw, profile, catalog, capacity)
   topUpLessons(plan, profile, catalog, capacity)
-  const { sessions, quotas } = buildSchedule(plan.subjects, schedule)
-  plan.subjects.forEach((s, i) => { s.sessionsPerWeek = quotas[i] })
+  const { sessions, quotas, scheduledLessons } = buildSchedule(plan.subjects, schedule)
+  plan.subjects.forEach((s, i) => {
+    s.sessionsPerWeek = quotas[i]
+    // Keep only the lessons that fit in the period; the rest would never be scheduled.
+    s.lessons = s.lessons.slice(0, scheduledLessons[i])
+  })
+  // Grade expectations ship with every plan so DEPR tracking can be switched on later.
+  const alignment = {}
+  for (const s of plan.subjects) {
+    const grade = gradeExpectations(s.key, profile.child.level)
+    if (grade) alignment[s.key] = grade
+  }
 
   return {
     ...plan,
@@ -337,6 +375,8 @@ export async function generatePlan(profile) {
     catalogMode: athenasMode(),
     createdAt: new Date().toISOString(),
     settings: schedule,
+    depr: !!profile.depr,
+    alignment,
     sessions,
   }
 }

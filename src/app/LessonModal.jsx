@@ -3,12 +3,13 @@ import { useEffect, useState } from 'react'
 import { CheckCircle2, Circle, Loader2, Play, X } from 'lucide-react'
 import { fetchLesson } from './api.js'
 import { gradeLabel } from '../../shared/subjects.js'
-import { WEEKDAY_LABELS, parseISODate } from '../../shared/scheduler.js'
+import { WEEKDAY_LABELS, SESSION_KINDS, parseISODate } from '../../shared/scheduler.js'
 
 export default function LessonModal({ session, subjects, onClose, done, onToggleDone, onPlay }) {
   const [detail, setDetail] = useState(null)
   const [error, setError] = useState('')
   const subject = subjects.find(s => s.key === session.subjectKey)
+  const kind = session.date ? SESSION_KINDS[session.kind] : null
 
   useEffect(() => {
     if (!session.lessonId) return
@@ -41,7 +42,7 @@ export default function LessonModal({ session, subjects, onClose, done, onToggle
         <div className="sticky top-0 flex items-start gap-3 border-b border-slate-100 bg-white p-5" style={{ borderTop: `4px solid ${subject?.color || '#c0a267'}` }}>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: subject?.color }}>
-              {subject?.emoji} {subject?.name}
+              {subject?.emoji} {subject?.name}{kind ? ` · ${kind.label}` : ''}
               {(detail?.levelCode || session.levelCode) && ` · ${gradeLabel(detail?.levelCode || session.levelCode)}`}
             </p>
             <h2 id="lesson-title" className="mt-1 text-xl font-bold text-slate-900">{detail?.title || session.title}</h2>
@@ -60,6 +61,9 @@ export default function LessonModal({ session, subjects, onClose, done, onToggle
           {!session.lessonId && (
             <p>Sesión libre para repasar lo aprendido en {subject?.name}: vuelve a las lecciones que costaron más, practica ejercicios o haz un proyecto corto.</p>
           )}
+          {session.lessonId && session.kind === 'practice' && <p className="rounded-lg bg-blue-50 p-3 text-blue-900">Hoy toca practicar esta lección. Se abre directo en la sección de Práctica.</p>}
+          {session.lessonId && session.kind === 'exam' && <p className="rounded-lg bg-purple-50 p-3 text-purple-900">Examen de la lección. Se abre directo en la sección de Examen. Al terminarlo, la lección cuenta como completada.</p>}
+          {session.lessonId && session.kind === 'review' && <p className="rounded-lg bg-amber-50 p-3 text-amber-900">Repaso de destrezas: vuelve a practicar esta lección de semanas anteriores para afianzar lo aprendido.</p>}
           {session.lessonId && !detail && !error && (
             <p className="flex items-center gap-2 text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando la lección desde Athenas…</p>
           )}
@@ -102,7 +106,7 @@ export default function LessonModal({ session, subjects, onClose, done, onToggle
           <div className="flex gap-2">
             {session.lessonId && onPlay && (
               <button type="button" onClick={onPlay} className="inline-flex items-center gap-1.5 rounded-lg bg-[#c0a267] px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-[#d1b67e]">
-                <Play className="h-4 w-4" /> Empezar lección
+                <Play className="h-4 w-4" /> {kind ? `Empezar: ${kind.label}` : 'Abrir lección'}
               </button>
             )}
             {onToggleDone && (

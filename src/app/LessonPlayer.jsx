@@ -8,9 +8,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, CheckCircle2, Circle, ExternalLink } from 'lucide-react'
 import { lessonUrl, VIEWER_ORIGIN } from './api.js'
+import { SESSION_KINDS } from '../../shared/scheduler.js'
 
 export default function LessonPlayer({ session, subject, done, onToggleDone, onClose }) {
-  const url = lessonUrl(session.lessonId, subject?.athenasCode || session.subjectCode)
+  const kind = SESSION_KINDS[session.kind] || SESSION_KINDS.learn
+  const url = lessonUrl(session.lessonId, subject?.athenasCode || session.subjectCode, kind.section)
   const [percent, setPercent] = useState(null)
   const doneRef = useRef(done)
   doneRef.current = done
@@ -56,7 +58,7 @@ export default function LessonPlayer({ session, subject, done, onToggleDone, onC
         </button>
         <span className="h-6 w-1 shrink-0 rounded-full" style={{ backgroundColor: subject?.color || '#c0a267' }} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] font-medium uppercase tracking-wide text-slate-300">{subject?.name}</p>
+          <p className="truncate text-[11px] font-medium uppercase tracking-wide text-slate-300">{subject?.name} · {kind.label}</p>
           <p className="truncate text-sm font-semibold">{session.title}</p>
         </div>
         {percent !== null && (

@@ -33,9 +33,11 @@ export const VIEWER_ORIGIN = new URL(VIEWER_URL).origin
 
 const ENGLISH_CODES = new Set(['en', 'mat-en', 'sci-en', 'bi-en', 'che-en', 'phy-en', 'pc-en'])
 
-export function lessonUrl(id, subjectCode) {
+/** `section` opens the viewer on concept / practice / exam for that session's step. */
+export function lessonUrl(id, subjectCode, section) {
   const url = new URL(VIEWER_URL)
   url.searchParams.set('lesson', id)
+  if (section && section !== 'concept') url.searchParams.set('section', section)
   url.searchParams.set('live', '1')
   // Host mode: viewer hides its own chrome and reports progress via postMessage.
   url.searchParams.set('host', '1')

@@ -22,9 +22,21 @@ export function newId() {
   return Math.random().toString(36).slice(2, 10)
 }
 
-/** Progress is keyed by lesson id (so it survives rescheduling) or session id for reviews. */
+/**
+ * Progress is keyed by lesson id + step (learn / practice / exam), so it
+ * survives rescheduling. Skills reviews are one-off and keyed by session id.
+ */
 export function progressKey(session) {
-  return session.lessonId ? `lesson:${session.lessonId}` : session.id
+  return session.lessonId && session.kind !== 'review' ? `lesson:${session.lessonId}:${session.kind || 'learn'}` : session.id
+}
+
+/** Which steps of a lesson are done: { learn, practice, exam }. */
+export function lessonSteps(lessonId, doneKeys) {
+  return {
+    learn: !!doneKeys?.has(`lesson:${lessonId}:learn`),
+    practice: !!doneKeys?.has(`lesson:${lessonId}:practice`),
+    exam: !!doneKeys?.has(`lesson:${lessonId}:exam`),
+  }
 }
 
 export function rescheduledPlan(plan) {

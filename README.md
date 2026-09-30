@@ -4,12 +4,12 @@ Dashboard para familias que educan en casa. Un **onboarding con IA** le pregunta
 
 ## Flujo
 
-1. **Onboarding (8 pasos):** nombre del padre o la madre, estudiante (nombre, edad, grado), idioma de instrucción, materias con su nivel (necesita refuerzo, va al día o está avanzado), estilo de aprendizaje e intereses, metas y enfoque (estructurado, mixto o flexible), horario (días, minutos al día, duración de cada sesión, fecha de inicio y duración del plan) y notas libres.
-2. **Generación:** el servidor trae el catálogo publicado de Athenas para el grado. Si una materia necesita refuerzo, incluye también el grado anterior. Si está avanzada, incluye el siguiente. Un LLM vía **OpenRouter** (por defecto `openai/gpt-4o`, igual que Genial Skills Maestro) escoge y ordena lecciones **por ID** de ese catálogo y define cuántas sesiones por semana tiene cada materia. Luego el servidor descarta cualquier ID que no exista, limita las lecciones puente a ~30% de la materia y completa la secuencia con el catálogo si el modelo se quedó corto.
-3. **Calendario:** `shared/scheduler.js` reparte las lecciones en los días y horas de la familia. Cuando se acaban las lecciones de una materia, agrega sesiones de repaso.
-4. **Revisión:** la familia ve el resumen, los consejos, la secuencia por materia y la primera semana. Desde ahí puede aceptar el plan, ajustar sus respuestas o pedir otra versión.
-5. **Dashboard:** Hoy, Plan de estudio (editable), Calendario (mes y semana), Catálogo (añadir lecciones al plan) y Estudiantes (varios hijos).
-6. **Lecciones:** "Empezar" abre la lección completa (concepto, vocabulario, ejemplos, práctica, examen y tutor IA) dentro del dashboard. Usa el visor de Genial Skills del proyecto `genial-skills-redesign` (`https://genial-skills-redesign.vercel.app/?lesson={id}&live=1`), que arma cualquier lección de Athenas por ID.
+1. **Onboarding (popup original, 8 pasos):** Estudiante (nombre, edad, grado, idioma) · Materias y cómo va en cada una · Aprendizaje (estilo, intereses, metas, enfoque, notas) · Currículo DEPR (opcional) · Calendario · Notificaciones · Portafolio · Tu plan. El plan se pide en segundo plano al terminar el Calendario.
+2. **Generación:** el servidor trae el catálogo publicado de Athenas para el grado (y el grado anterior o siguiente si la materia necesita refuerzo o está avanzada). Un LLM vía **OpenRouter** escoge y ordena lecciones **por ID**. El servidor descarta IDs inexistentes, limita las lecciones puente a ~30% y completa la secuencia si el modelo se queda corto.
+3. **Ciclo por lección:** cada lección se trabaja en tres días: **Aprender** (concepto, vocabulario, ejemplos) → **Practicar** → **Examen**, intercalado entre lecciones. Las materias con 4+ sesiones por semana tienen un **repaso de destrezas** semanal (2-3 sesiones: cada dos semanas) que vuelve a una lección de semanas anteriores (`shared/scheduler.js`).
+4. **DEPR (opcional):** con el interruptor activo, la IA prioriza cubrir las expectativas de grado de los *Estándares de Contenido y Expectativas de Grado* del DEPR, y Planificación muestra el cumplimiento por materia y dominio (en el plan / completadas al hacer el examen). 95% de las lecciones de Athenas tienen su código de estándar.
+5. **Dashboard original:** mientras no hay estudiantes se ve el contenido demo. Con un plan, Inicio, Estudiantes, Calendario, Planificación (tarjeta "Plan de estudio con IA") y Catálogo usan los datos reales; Portafolio, Tutoría, Mensajería y Comunidad quedan como estaban.
+6. **Lecciones:** "Empezar" abre la lección de Genial Skills dentro del dashboard (visor de `genial-skills-redesign` en modo `?host=1`, abriendo en la sección del paso con `?section=practice|exam`).
 
 ## Estructura
 
@@ -25,10 +25,13 @@ server/
 shared/
   subjects.js     Materias ↔ códigos de Athenas (mat-sp, sp, en, sci-sp, sci-so, bi-sp…)
   scheduler.js    Plan → sesiones con fecha (se usa en el servidor y en el navegador)
-src/app/        Frontend nuevo (Onboarding, PlanView, LessonPlayer, secciones del dashboard)
+  depr.js         Expectativas de grado del DEPR y estándares por lección
+  depr-standards.json, lesson-standards.json   generados por scripts/build-depr-data.mjs
+src/App.jsx     Dashboard original; monta las vistas reales cuando hay estudiantes
+src/app/        AIOnboardingWizard (popup), PlanView, DeprPanel, FamilyHome/Calendar/Catalog/Students, AIPlanning, LessonPlayer
 ```
 
-`src/App.jsx`, `NewOnboardingSystem.jsx` y los otros componentes del prototipo anterior siguen en el repo como referencia, pero ya no se montan.
+Para regenerar los datos del DEPR: `node --env-file=.env.local scripts/build-depr-data.mjs "<ruta a Genial Skill maestros/standards>"`.
 
 ## Configuración
 
