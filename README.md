@@ -1,65 +1,55 @@
-# Dashboard de Homeschooling - Genial Skills
+# Genial Skills Homeschool
 
-Un dashboard completo de gestión académica diseñado específicamente para familias que practican homeschooling, con herramientas integradas de planificación, seguimiento de progreso y gestión de lecciones.
+Dashboard para familias que educan en casa. Un **onboarding con IA** le pregunta a la familia sobre el estudiante y genera un **plan de estudio con lecciones reales de Athenas** y un **calendario sugerido**.
 
-## Características Principales
+## Flujo
 
-### Sistema de Onboarding Interactivo
-El dashboard incluye un sistema de onboarding de 6 pasos que guía a los usuarios a través de la configuración inicial. Cada paso está diseñado para ser opcional y permite omitir secciones con modales informativos que explican dónde configurar esas opciones más tarde.
+1. **Onboarding (8 pasos):** nombre del padre o la madre, estudiante (nombre, edad, grado), idioma de instrucción, materias con su nivel (necesita refuerzo, va al día o está avanzado), estilo de aprendizaje e intereses, metas y enfoque (estructurado, mixto o flexible), horario (días, minutos al día, duración de cada sesión, fecha de inicio y duración del plan) y notas libres.
+2. **Generación:** el servidor trae el catálogo publicado de Athenas para el grado. Si una materia necesita refuerzo, incluye también el grado anterior. Si está avanzada, incluye el siguiente. Un LLM vía **OpenRouter** (por defecto `openai/gpt-4o`, igual que Genial Skills Maestro) escoge y ordena lecciones **por ID** de ese catálogo y define cuántas sesiones por semana tiene cada materia. Luego el servidor descarta cualquier ID que no exista, limita las lecciones puente a ~30% de la materia y completa la secuencia con el catálogo si el modelo se quedó corto.
+3. **Calendario:** `shared/scheduler.js` reparte las lecciones en los días y horas de la familia. Cuando se acaban las lecciones de una materia, agrega sesiones de repaso.
+4. **Revisión:** la familia ve el resumen, los consejos, la secuencia por materia y la primera semana. Desde ahí puede aceptar el plan, ajustar sus respuestas o pedir otra versión.
+5. **Dashboard:** Hoy, Plan de estudio (editable), Calendario (mes y semana), Catálogo (añadir lecciones al plan) y Estudiantes (varios hijos).
+6. **Lecciones:** "Empezar" abre la lección completa (concepto, vocabulario, ejemplos, práctica, examen y tutor IA) dentro del dashboard. Usa el visor de Genial Skills del proyecto `genial-skills-redesign` (`https://genial-skills-redesign.vercel.app/?lesson={id}&live=1`), que arma cualquier lección de Athenas por ID.
 
-### Gestión de Estudiantes
-La plataforma permite gestionar múltiples estudiantes con tarjetas personalizadas que muestran el progreso académico mediante gráficas circulares. Cada estudiante tiene un perfil detallado con pestañas para progreso, tiempo de estudio, dificultades, logros y notas.
+## Estructura
 
-### Catálogo de Lecciones
-El catálogo incluye un sistema de filtros avanzado con acordeón expandible que permite buscar lecciones por materia, grado, dificultad y duración. También incluye campos de búsqueda por código y texto para encontrar contenido específico.
-
-### Planificación Académica
-Las herramientas de planificación permiten crear y gestionar planes académicos personalizados, asignar lecciones y crear evaluaciones. La interfaz simplificada se enfoca en las acciones principales sin sobrecargar visualmente.
-
-### Tour Guiado
-Un tour interactivo posiciona dinámicamente las ventanas de ayuda sobre los iconos específicos del menú, proporcionando una experiencia de aprendizaje intuitiva sin bloquear la funcionalidad del dashboard.
-
-## Tecnologías Utilizadas
-
-- **React 19** con hooks modernos para gestión de estado
-- **Vite** como bundler para desarrollo rápido
-- **Tailwind CSS** para estilos responsivos y consistentes
-- **Recharts** para visualizaciones de datos interactivas
-- **Lucide React** para iconografía moderna y consistente
-
-## Instalación
-
-```bash
-# Clonar el repositorio
-git clone https://github.com/tu-usuario/dashboard-homeschool.git
-cd dashboard-homeschool
-
-# Instalar dependencias
-npm install
-
-# Ejecutar en modo desarrollo
-npm run dev
-
-# Construir para producción
-npm run build
+```
+api/            Funciones serverless (Vercel). También las sirve `npm run dev`.
+  plan.js         POST /api/plan     → plan con IA + calendario
+  catalog.js      GET  /api/catalog  → lecciones publicadas por grado y materia
+  lesson.js       GET  /api/lesson   → detalle (objetivos, estándares, descripción)
+server/
+  athenas.js      Cliente de Athenas (X-API-KEY del lado del servidor, caché de 10 min)
+  planner.js      Prompt + structured output vía OpenRouter, validación de IDs, planificador de respaldo
+  catalog-snapshot.json  Copia del catálogo publicado (IDs + títulos) para cuando no hay key
+shared/
+  subjects.js     Materias ↔ códigos de Athenas (mat-sp, sp, en, sci-sp, sci-so, bi-sp…)
+  scheduler.js    Plan → sesiones con fecha (se usa en el servidor y en el navegador)
+src/app/        Frontend nuevo (Onboarding, PlanView, LessonPlayer, secciones del dashboard)
 ```
 
-## Estructura del Proyecto
-
-El proyecto está organizado en componentes modulares que facilitan el mantenimiento y la escalabilidad. El componente principal `App.jsx` maneja el estado global y la navegación, mientras que componentes especializados como `NewOnboardingSystem.jsx` y `StudentDetailModal.jsx` manejan funcionalidades específicas.
+`src/App.jsx`, `NewOnboardingSystem.jsx` y los otros componentes del prototipo anterior siguen en el repo como referencia, pero ya no se montan.
 
 ## Configuración
 
-El dashboard utiliza localStorage para persistir el estado del usuario, incluyendo el progreso del onboarding y las preferencias de filtros. No requiere configuración de base de datos externa para funcionar.
+```bash
+npm install --legacy-peer-deps   # react-beautiful-dnd (del prototipo viejo) no declara soporte para React 19
+cp .env.example .env.local        # llenar las keys
+npm run dev
+```
 
-## Despliegue
+| Variable | Para qué |
+|---|---|
+| `OPENROUTER_API_KEY` | Plan con IA. Sin ella se usa el planificador automático y el plan muestra la etiqueta "Plan automático". |
+| `OPENROUTER_MODEL` | Opcional, por defecto `openai/gpt-4o`. Debe soportar structured outputs (`response_format: json_schema`). |
+| `ATHENAS_API_KEY` | Catálogo en vivo y detalle de lecciones. Sin ella, el catálogo sale de `catalog-snapshot.json` y el detalle no está disponible. |
+| `ATHENAS_API_BASE` | Por defecto `https://athenasapi-dev.genialskillsweb.com` |
+| `VITE_LESSON_VIEWER_URL` | Opcional. Visor de lecciones que se incrusta; por defecto `https://genial-skills-redesign.vercel.app/`. |
 
-La aplicación está optimizada para despliegue en plataformas como Vercel, Netlify o cualquier servidor que soporte aplicaciones React estáticas. El build de producción genera archivos optimizados con code splitting automático.
+Las keys van en `.env.local`, que está en `.gitignore`. `.env.example` es solo la plantilla que se sube al repo y nunca debe llevar valores reales.
 
-## Contribución
+En Vercel, estas mismas variables se configuran en Settings → Environment Variables. `/api/plan` tiene `maxDuration: 300` por si el modelo tarda (con GPT-4o tarda ~10 s).
 
-Para contribuir al proyecto, por favor sigue las convenciones de código establecidas y asegúrate de que todas las funcionalidades existentes sigan funcionando correctamente después de tus cambios.
+## Datos
 
-## Licencia
-
-Este proyecto está desarrollado para Genial Skills y su uso está sujeto a los términos de la plataforma educativa.
+Todo se guarda en `localStorage` bajo la llave `gs_homeschool_v2`: familia, estudiantes, perfiles, planes y progreso. El progreso se guarda por ID de lección, así que se conserva cuando el plan se reorganiza. En Estudiantes, la opción "Borrar todo y empezar de nuevo" vuelve a abrir el onboarding.
