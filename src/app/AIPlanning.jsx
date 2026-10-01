@@ -25,8 +25,8 @@ export function AIPlanCard({ students, doneKeysByStudent, onOpenPlan, onCreate }
       </CardHeader>
       <CardContent>
         <p className="mb-4 text-gray-600">
-          Responde unas preguntas sobre tu hijo(a) y la IA arma un plan con lecciones reales de Genial Skills: cada lección con su práctica y su examen,
-          repasos de destrezas y, si quieres, alineado a los estándares del Departamento de Educación.
+          Conversa con Lecturina sobre tu hijo(a) y te arma un plan con lecciones reales de Genial Skills, ya sea para educar en casa o para reforzar
+          materias y destrezas: cada lección con su práctica y su examen, repasos de destrezas y, si quieres, alineado a los estándares del DEPR.
         </p>
         {students.length > 0 ? (
           <div className="space-y-2">
@@ -50,7 +50,7 @@ export function AIPlanCard({ students, doneKeysByStudent, onOpenPlan, onCreate }
           </div>
         ) : (
           <Button className="w-full bg-violet-600 hover:bg-violet-700" onClick={() => onCreate(null)}>
-            <Sparkles className="mr-2 h-4 w-4" /> Crear plan con IA
+            <Sparkles className="mr-2 h-4 w-4" /> Hablar con Lecturina
           </Button>
         )}
       </CardContent>
@@ -96,7 +96,7 @@ export default function AIPlanning({ students, studentId, setStudentId, store, d
               {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           )}
-          <Button variant="outline" onClick={() => onEditAnswers(student)}><MessageSquareText className="mr-2 h-4 w-4" /> Cambiar respuestas</Button>
+          <Button variant="outline" onClick={() => onEditAnswers(student)}><MessageSquareText className="mr-2 h-4 w-4" /> Pedir cambios a Lecturina</Button>
           <Button variant="outline" onClick={regenerate} disabled={busy}>
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
             {busy ? 'Generando…' : 'Nueva versión con IA'}

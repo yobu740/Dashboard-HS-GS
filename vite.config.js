@@ -8,7 +8,7 @@ import path from 'path'
 // the Vercel CLI. Server env vars come from .env / .env.local (non-VITE_ ones
 // are never exposed to the browser bundle).
 function apiRoutes() {
-  const routes = { '/api/plan': './api/plan.js', '/api/catalog': './api/catalog.js', '/api/lesson': './api/lesson.js' }
+  const routes = { '/api/plan': './api/plan.js', '/api/catalog': './api/catalog.js', '/api/lesson': './api/lesson.js', '/api/chat': './api/chat.js' }
   return {
     name: 'local-api-routes',
     configureServer(server) {

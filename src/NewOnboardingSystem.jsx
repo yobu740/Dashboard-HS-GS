@@ -431,7 +431,7 @@ function Step3CalendarConfig({ onNext, onSkip }) {
 }
 
 // Step 4: Notifications Setup
-export function Step4NotificationsSetup({ onNext, onSkip }) {
+function Step4NotificationsSetup({ onNext, onSkip }) {
   const [notifications, setNotifications] = useState({
     daily: true,
     weekly: true,
@@ -515,7 +515,7 @@ export function Step4NotificationsSetup({ onNext, onSkip }) {
 }
 
 // Step 5: Portfolio Configuration
-export function Step5PortfolioConfig({ onNext, onSkip }) {
+function Step5PortfolioConfig({ onNext, onSkip }) {
   const [portfolioSettings, setPortfolioSettings] = useState({
     autoReports: true,
     includePhotos: true,
@@ -685,7 +685,7 @@ function Step6FinalConfig({ onFinish }) {
 }
 
 // Enhanced Skip Modal Component with better accessibility
-export function SkipModal({ isOpen, onClose, onConfirm, stepTitle, stepDescription, stepNumber }) {
+function SkipModal({ isOpen, onClose, onConfirm, stepTitle, stepDescription, stepNumber }) {
   // Handle escape key
   useEffect(() => {
     if (!isOpen) return;

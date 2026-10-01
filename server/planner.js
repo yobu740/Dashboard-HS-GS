@@ -10,6 +10,10 @@
 // 4. When the family opts in, align with the DEPR grade expectations: the
 //    model sees which expectations each lesson covers and is asked to cover
 //    as many as possible; the plan ships the expectations for the coverage UI.
+// 5. Two paths: a full homeschool plan, or "refuerzo" (reinforcement of the
+//    subjects/skills the family named, often after school) where only the
+//    related lessons are chosen. Sessions are spread evenly across subjects
+//    (balanceSessions) so a reinforcement subject cannot crowd out the rest.
 //
 // With no OpenRouter key the heuristic planner below produces the same
 // plan shape, so the product flow works end to end in any environment.
@@ -18,11 +22,7 @@ import { catalogFor, athenasMode } from './athenas.js'
 import { SUBJECTS, GRADES, gradeLabel } from '../shared/subjects.js'
 import { buildSchedule, fitQuotas, lessonCapacity, weeklyCapacity, slotsPerDay, WEEKDAY_LABELS } from '../shared/scheduler.js'
 import { gradeExpectations, lessonExpectations } from './depr.js'
-
-// OpenRouter (same provider as Genial Skills Maestro). Any model with
-// structured-output support works; override with OPENROUTER_MODEL.
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const MODEL = process.env.OPENROUTER_MODEL || 'openai/gpt-4o'
+import { callOpenRouter } from './openrouter.js'
 
 const SUPPORT_LABEL = {
   refuerzo: 'necesita refuerzo',
@@ -79,7 +79,9 @@ Tu trabajo: a partir del perfil del estudiante y del catálogo real de lecciones
 Cómo decidir:
 - Solo puedes usar lecciones del catálogo que se te entrega, identificadas por su ID exacto. Nunca inventes IDs ni títulos.
 - Ordena las lecciones de cada materia en una secuencia pedagógica lógica: fundamentos y prerrequisitos primero, luego aplicación. El orden del catálogo es solo una referencia.
-- Si una materia "necesita refuerzo", empieza con lecciones puente del grado anterior (vienen marcadas) antes de las del grado actual, y dale más sesiones por semana. Las lecciones puente no deben pasar de un 30% de la materia: la meta es llegar al contenido de su grado.
+- Si una materia "necesita refuerzo", empieza con lecciones puente del grado anterior (vienen marcadas) antes de las del grado actual. Las lecciones puente no deben pasar de un 30% de la materia: la meta es llegar al contenido de su grado.
+- El tiempo semanal se reparte de forma PAREJA entre materias (el sistema lo ajusta). Tu trabajo es elegir y ordenar las lecciones; a una materia de refuerzo dale lecciones puente, no más tiempo.
+- Si el tipo de plan es REFUERZO: la familia no busca cubrir todo el grado, sino reforzar las destrezas que mencionó. Elige SOLO lecciones relacionadas con esas destrezas (por título y por expectativas DEPR), del grado actual y del anterior, de lo más básico a lo más complejo. Si hay pocas relacionadas, añade las más cercanas del mismo tema. Las lecciones puente pueden ser hasta el 60%. El resumen debe hablar de las destrezas que se van a reforzar.
 - Si una materia "está avanzado", puedes cerrar con lecciones del grado siguiente (vienen marcadas) y darle un ritmo normal.
 - Usa los intereses y el estilo de aprendizaje del niño para priorizar temas y para los consejos, sin inventar contenido de las lecciones.
 - La suma de sesiones por semana de todas las materias no puede pasar de la capacidad semanal indicada. Puedes dejar algo de capacidad libre si el enfoque de la familia es flexible.
@@ -91,9 +93,10 @@ function describeProfile(profile, capacity, perDay) {
   const { child, schedule } = profile
   const days = (schedule.days || []).map(d => WEEKDAY_LABELS[d]).join(', ')
   const lines = [
+    `Tipo de plan: ${profile.mode === 'refuerzo' ? 'REFUERZO de materias o destrezas específicas' : 'educación en el hogar (plan completo)'}.`,
     `Estudiante: ${child.name}${child.age ? `, ${child.age} años` : ''}, ${gradeLabel(child.level)}.`,
     `Idioma de instrucción preferido: ${LANGUAGE_LABEL[child.language] || 'español'}.`,
-    `Materias y nivel percibido por la familia: ${profile.subjects.map(s => `${SUBJECTS[s.key].name} (${SUPPORT_LABEL[s.support] || 'va al día'})`).join('; ')}.`,
+    `Materias y nivel percibido por la familia: ${profile.subjects.map(s => `${SUBJECTS[s.key].name} (${SUPPORT_LABEL[s.support] || 'va al día'}${s.skills ? `; destrezas a trabajar: ${s.skills}` : ''})`).join('; ')}.`,
   ]
   if (profile.learningStyles?.length) lines.push(`Estilo de aprendizaje: ${profile.learningStyles.join(', ')}.`)
   if (profile.interests?.length) lines.push(`Intereses: ${profile.interests.join(', ')}.`)
@@ -137,54 +140,53 @@ function describeCatalog(catalog, childLevel, depr) {
 }
 
 async function planWithAI(profile, catalog, capacity, perDay) {
-  const key = process.env.OPENROUTER_API_KEY
-  if (!key) {
-    const err = new Error('No hay OPENROUTER_API_KEY configurada.')
-    err.noCredentials = true
-    throw err
-  }
-  const r = await fetch(OPENROUTER_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      'X-Title': 'Genial Skills Homeschool',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      temperature: 0.4,
-      max_tokens: 12000,
-      // Structured output: the model must answer with JSON matching PLAN_SCHEMA.
-      response_format: {
-        type: 'json_schema',
-        json_schema: { name: 'study_plan', strict: true, schema: PLAN_SCHEMA },
+  const { json, model } = await callOpenRouter({
+    schemaName: 'study_plan',
+    schema: PLAN_SCHEMA,
+    maxTokens: 12000,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: `# Perfil\n${describeProfile(profile, capacity, perDay)}\n\n# Catálogo de Athenas\n${describeCatalog(catalog, profile.child.level, profile.depr)}\n\nDiseña el plan. Responde solo con el JSON.`,
       },
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: `# Perfil
-${describeProfile(profile, capacity, perDay)}
-
-# Catálogo de Athenas
-${describeCatalog(catalog, profile.child.level, profile.depr)}
-
-Diseña el plan. Responde solo con el JSON.`,
-        },
-      ],
-    }),
+    ],
   })
-  const data = await r.json().catch(() => ({}))
-  if (!r.ok) {
-    const err = new Error(`OpenRouter ${r.status}: ${data?.error?.message || 'error'}`)
-    err.noCredentials = r.status === 401
-    throw err
+  return { raw: json, model }
+}
+
+/**
+ * Words from the family's skill descriptions, used to find related lessons
+ * ("fracciones y división" → fraccion, division). Accent-insensitive.
+ */
+const STOPWORDS = new Set(['para', 'como', 'con', 'que', 'las', 'los', 'del', 'una', 'uno', 'por', 'mas', 'muy', 'sus', 'entre', 'sobre', 'tiene', 'cuesta', 'leer'])
+const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+function skillWords(skills) {
+  return norm(skills).split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !STOPWORDS.has(w)).map(w => w.replace(/(es|s)$/, ''))
+}
+function skillScore(lesson, words) {
+  const title = norm(lesson.title)
+  return words.reduce((n, w) => n + (title.includes(w) ? 1 : 0), 0)
+}
+
+/**
+ * Even split of the family's weekly time across subjects (80% of it with a
+ * flexible approach). Leftover sessions go to reinforcement subjects first, so
+ * a subject that needs help gets at most one extra session a week instead of
+ * crowding out the others.
+ */
+function balanceSessions(subjects, capacity, profile) {
+  if (!subjects.length) return
+  const usable = profile.approach === 'flexible' && profile.mode !== 'refuerzo' ? Math.max(subjects.length, Math.round(capacity * 0.8)) : capacity
+  const base = Math.max(1, Math.floor(usable / subjects.length))
+  let extra = Math.max(0, usable - base * subjects.length)
+  const order = [...subjects].sort((a, b) => (b.support === 'refuerzo') - (a.support === 'refuerzo'))
+  for (const s of subjects) s.sessionsPerWeek = base
+  for (const s of order) {
+    if (!extra) break
+    s.sessionsPerWeek += 1
+    extra -= 1
   }
-  const choice = data.choices?.[0]
-  if (choice?.finish_reason === 'length') throw new Error('La respuesta del modelo quedó incompleta.')
-  // Some models wrap JSON in a code fence even with response_format set.
-  const text = String(choice?.message?.content || '').replace(/^```(?:json)?\s*|\s*```$/g, '').trim()
-  return { raw: JSON.parse(text), model: data.model || MODEL }
 }
 
 /** Deterministic plan used when the AI is unavailable. */
@@ -204,7 +206,12 @@ function planHeuristically(profile, catalog, capacity) {
     const after = all.filter(l => l.levelCode !== profile.child.level && !before.includes(l))
     // Bridge lessons from the previous grade take at most ~30% of the slots, so
     // the child still reaches their own grade's content within the period.
-    const lessons = [...before.slice(0, Math.ceil(slots * 0.3)), ...own, ...after]
+    let lessons = [...before.slice(0, Math.ceil(slots * 0.3)), ...own, ...after]
+    const words = profile.mode === 'refuerzo' ? skillWords(s.skills) : []
+    if (words.length) {
+      const related = all.filter(l => skillScore(l, words) > 0)
+      if (related.length) lessons = [...related, ...lessons.filter(l => !related.includes(l))]
+    }
     return {
       subjectKey: s.key,
       sessionsPerWeek: perWeek,
@@ -296,7 +303,7 @@ function topUpLessons(plan, profile, catalog, capacity) {
   plan.subjects.forEach((subject, i) => {
     const target = lessonCapacity(quotas[i], weeks)
     // Bridge lessons from the grade below: keep the model's order, cap at ~30%.
-    const bridgeCap = Math.ceil(target * 0.3)
+    const bridgeCap = Math.ceil(target * (profile.mode === 'refuerzo' ? 0.6 : 0.3))
     let bridges = 0
     subject.lessons = subject.lessons.filter(l => {
       if (!below.has(subject.key) || l.levelCode === profile.child.level || GRADES.indexOf(l.levelCode) > GRADES.indexOf(profile.child.level)) return true
@@ -309,6 +316,13 @@ function topUpLessons(plan, profile, catalog, capacity) {
     }
     const chosen = new Set(subject.lessons.map(l => l.id))
     const pool = catalog[subject.key].lessons.filter(l => !chosen.has(l.id))
+    const words = profile.mode === 'refuerzo' ? skillWords(profile.subjects.find(x => x.key === subject.key)?.skills) : []
+    if (words.length) {
+      // Reinforcement: only top up with lessons related to the named skills.
+      const related = pool.filter(l => skillScore(l, words) > 0).sort((a, b) => skillScore(b, words) - skillScore(a, words))
+      subject.lessons.push(...related.slice(0, target - subject.lessons.length).map(l => ({ id: l.id, title: l.title, levelCode: l.levelCode, subjectCode: l.subjectCode, standards: l.standards })))
+      if (subject.lessons.length) return
+    }
     let own = pool.filter(l => l.levelCode === profile.child.level)
     if (profile.depr) {
       const covered = new Set(subject.lessons.flatMap(l => l.standards || []))
@@ -353,6 +367,8 @@ export async function generatePlan(profile) {
   }
 
   const plan = normalizePlan(raw, profile, catalog, capacity)
+  plan.subjects.forEach(s => { s.support = profile.subjects.find(x => x.key === s.key)?.support })
+  balanceSessions(plan.subjects, capacity, profile)
   topUpLessons(plan, profile, catalog, capacity)
   const { sessions, quotas, scheduledLessons } = buildSchedule(plan.subjects, schedule)
   plan.subjects.forEach((s, i) => {
@@ -376,6 +392,7 @@ export async function generatePlan(profile) {
     createdAt: new Date().toISOString(),
     settings: schedule,
     depr: !!profile.depr,
+    mode: profile.mode || 'homeschool',
     alignment,
     sessions,
   }

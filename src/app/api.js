@@ -17,6 +17,14 @@ export function generatePlan(profile) {
   })
 }
 
+export function sendChat({ messages, profile, planExists }) {
+  return request('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, profile, planExists }),
+  })
+}
+
 export function fetchCatalog({ level, subject, language }) {
   const q = new URLSearchParams({ level, subject, language: language || 'es' })
   return request(`/api/catalog?${q}`)
