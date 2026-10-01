@@ -79,7 +79,12 @@ export function mergeProfile(profile, u = {}) {
   if (u.startTime && /^\d{1,2}:\d{2}$/.test(u.startTime)) p.schedule.startTime = u.startTime.padStart(5, '0')
   if (u.startDate && /^\d{4}-\d{2}-\d{2}$/.test(u.startDate)) p.schedule.startDate = u.startDate
   if (Number.isFinite(u.weeks)) p.schedule.weeks = clamp(Math.round(u.weeks), 2, 40)
-  if (u.notes) p.notes = [p.notes, String(u.notes).trim()].filter(Boolean).join(' ').slice(-1200)
+  if (u.notes) {
+    // Each turn may restate earlier details; only append sentences not already noted.
+    const known = new Set(p.notes.split(/(?<=[.!?])\s+/).map(x => x.trim().toLowerCase()))
+    const fresh = String(u.notes).trim().split(/(?<=[.!?])\s+/).filter(x => x && !known.has(x.trim().toLowerCase()))
+    p.notes = [p.notes, ...fresh].filter(Boolean).join(' ').slice(-1200)
+  }
   return p
 }
 
