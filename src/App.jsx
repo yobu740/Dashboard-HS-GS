@@ -46,9 +46,17 @@ import portfolioIcon from './assets/NavMenu-icon-Portfolio.png'
 import communityIcon from './assets/NavMenu-icon-Community.png'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
-import { useNewOnboarding, NewOnboardingWizard, DashboardTour, WeeklyInsightsCard } from './NewOnboardingSystem.jsx'
-import CatalogFilters from './CatalogFilters.jsx'
+import { useNewOnboarding, DashboardTour, WeeklyInsightsCard } from './NewOnboardingSystem.jsx'
 import StudentDetailModal from './StudentDetailModal.jsx'
+import { useFamilyStore, progressKey } from './app/store.js'
+import ChatOnboarding from './app/ChatOnboarding.jsx'
+import LessonModal from './app/LessonModal.jsx'
+import LessonPlayer from './app/LessonPlayer.jsx'
+import FamilyHome from './app/FamilyHome.jsx'
+import FamilyCalendar from './app/FamilyCalendar.jsx'
+import FamilyCatalog from './app/FamilyCatalog.jsx'
+import FamilyStudents from './app/FamilyStudents.jsx'
+import AIPlanning, { AIPlanCard } from './app/AIPlanning.jsx'
 import './App.css'
 
 // Progress Area Component
@@ -373,6 +381,32 @@ function App() {
     completeTour,
     dismissWeeklyInsights,
   } = useNewOnboarding()
+
+  // Real family data from the AI onboarding. While there are no students the
+  // dashboard keeps showing the original demo content.
+  const family = useFamilyStore()
+  const realStudents = family.state.students
+  const hasFamily = realStudents.length > 0
+  const doneKeysByStudent = React.useMemo(() => Object.fromEntries(
+    realStudents.map(s => [s.id, new Set(Object.keys(family.state.progress[s.id] || {}))]),
+  ), [realStudents, family.state.progress])
+  const [wizardFor, setWizardFor] = useState(null) // { student } - onboarding reopened from the dashboard
+  const [showAIPlan, setShowAIPlan] = useState(false)
+  const [aiPlanStudentId, setAiPlanStudentId] = useState(null)
+  const [openLesson, setOpenLesson] = useState(null) // { session, studentId }
+  const [playing, setPlaying] = useState(null) // { session, studentId }
+  const openSession = (session, studentId) => setOpenLesson({ session, studentId })
+  const playSession = (session, studentId) => { setOpenLesson(null); setPlaying({ session, studentId }) }
+  const openAIPlan = studentId => {
+    setAiPlanStudentId(studentId)
+    setShowCustomPlanning(false)
+    setShowCatalogPlans(false)
+    setShowOptionB(false)
+    setShowAssignmentCreation(false)
+    setShowAIPlan(true)
+    setActiveSection('planificacion')
+  }
+  const studentOf = id => realStudents.find(s => s.id === id)
 
   // PDF Generation Function
   const generatePDF = () => {
@@ -1197,7 +1231,7 @@ function App() {
                 <button
                   key={item.id}
                   data-menu={item.id}
-                  onClick={() => setActiveSection(item.id)}
+                  onClick={() => { setActiveSection(item.id); setShowAIPlan(false) }}
                   className={`w-full flex flex-col items-center justify-center px-2 py-3 mb-2 rounded-lg transition-colors ${
                     activeSection === item.id 
                       ? 'bg-yellow-700 text-white' 
@@ -1227,7 +1261,19 @@ function App() {
 
         {/* Main Content */}
         <main className="flex-1 p-6">
-          {activeSection === 'inicio' && (
+          {activeSection === 'inicio' && hasFamily && (
+            <FamilyHome
+              students={realStudents}
+              progress={family.state.progress}
+              doneKeysByStudent={doneKeysByStudent}
+              openSession={openSession}
+              playSession={playSession}
+              goTo={section => (section === 'planificacion' ? openAIPlan(realStudents[0].id) : setActiveSection(section))}
+              generatePDF={generatePDF}
+            />
+          )}
+
+          {activeSection === 'inicio' && !hasFamily && (
             <div className="space-y-6">
               {/* Welcome Header */}
               <div className="mb-8">
@@ -1685,122 +1731,21 @@ function App() {
             </div>
           )}
 
+          {/* Estudiantes Section */}
+          {activeSection === 'estudiantes' && (
+            <FamilyStudents
+              students={realStudents}
+              doneKeysByStudent={doneKeysByStudent}
+              onAdd={() => setWizardFor({ student: null })}
+              onEdit={student => setWizardFor({ student })}
+              onRemove={family.removeStudent}
+              onOpenPlan={openAIPlan}
+            />
+          )}
+
           {/* Catálogo Section */}
           {activeSection === 'catalogo' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-gray-900">Catálogo de lecciones</h1>
-                <Button variant="outline" size="sm" className="text-gray-600">
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  Mostrar catálogo
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* Filters Sidebar */}
-                <div className="lg:col-span-1">
-                  <CatalogFilters onFiltersChange={(filters) => console.log('Filters changed:', filters)} />
-                </div>
-
-                {/* Lessons Grid */}
-                <div className="lg:col-span-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {/* Sample Lessons */}
-                    {[
-                      {
-                        title: 'Suma de Fracciones',
-                        subject: 'Matemáticas',
-                        grade: '3.º Grado',
-                        duration: '25 min',
-                        difficulty: 'Básico',
-                        color: 'bg-green-500'
-                      },
-                      {
-                        title: 'El Ciclo del Agua',
-                        subject: 'Ciencias',
-                        grade: '2.º Grado',
-                        duration: '30 min',
-                        difficulty: 'Intermedio',
-                        color: 'bg-purple-500'
-                      },
-                      {
-                        title: 'Verb to Be',
-                        subject: 'English',
-                        grade: '4.º Grado',
-                        duration: '20 min',
-                        difficulty: 'Básico',
-                        color: 'bg-blue-500'
-                      },
-                      {
-                        title: 'Lectura Comprensiva',
-                        subject: 'Español',
-                        grade: '1.º Grado',
-                        duration: '35 min',
-                        difficulty: 'Básico',
-                        color: 'bg-red-500'
-                      },
-                      {
-                        title: 'Mi Comunidad',
-                        subject: 'Estudios Sociales',
-                        grade: '2.º Grado',
-                        duration: '40 min',
-                        difficulty: 'Intermedio',
-                        color: 'bg-orange-500'
-                      },
-                      {
-                        title: 'Fracciones Básicas',
-                        subject: 'Matemáticas',
-                        grade: '2.º Grado',
-                        duration: '30 min',
-                        difficulty: 'Básico',
-                        color: 'bg-green-500'
-                      }
-                    ].map((lesson, index) => (
-                      <Card key={index} className="hover:shadow-lg transition-shadow">
-                        <CardHeader className="pb-3">
-                          <div className="w-full h-24 rounded-lg mb-3 overflow-hidden">
-                            <img 
-                              src="/catalog-default.jpg" 
-                              alt="Lesson Image" 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <CardTitle className="text-lg">{lesson.title}</CardTitle>
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="secondary" className="text-xs">
-                              {lesson.subject}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {lesson.grade}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2 mb-4">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Duración:</span>
-                              <span>{lesson.duration}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Dificultad:</span>
-                              <span>{lesson.difficulty}</span>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Button className="w-full" size="sm">
-                              Asignar Lección
-                            </Button>
-                            <Button variant="outline" className="w-full" size="sm">
-                              Vista Previa
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <FamilyCatalog students={realStudents} updatePlan={family.updatePlan} openSession={openSession} />
           )}
 
           {/* Community Section */}
@@ -1930,7 +1875,17 @@ function App() {
           )}
 
           {/* Calendar Section */}
-          {activeSection === 'calendario' && (
+          {activeSection === 'calendario' && hasFamily && (
+            <FamilyCalendar
+              students={realStudents}
+              doneKeysByStudent={doneKeysByStudent}
+              toggleDone={family.toggleDone}
+              openSession={openSession}
+              playSession={playSession}
+            />
+          )}
+
+          {activeSection === 'calendario' && !hasFamily && (
             <div className="space-y-6">
               <div className="flex justify-between items-center mb-6">
                 <div>
@@ -2267,7 +2222,20 @@ function App() {
           )}
 
           {/* Planning Section */}
-          {activeSection === 'planificacion' && !showCustomPlanning && !showCatalogPlans && !showOptionB && !showAssignmentCreation && (
+          {activeSection === 'planificacion' && showAIPlan && hasFamily && (
+            <AIPlanning
+              students={realStudents}
+              studentId={aiPlanStudentId}
+              setStudentId={setAiPlanStudentId}
+              store={family}
+              doneKeysByStudent={doneKeysByStudent}
+              openSession={openSession}
+              onEditAnswers={student => setWizardFor({ student })}
+              onBack={() => setShowAIPlan(false)}
+            />
+          )}
+
+          {activeSection === 'planificacion' && !(showAIPlan && hasFamily) && !showCustomPlanning && !showCatalogPlans && !showOptionB && !showAssignmentCreation && (
             <div className="space-y-6">
               <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -2276,6 +2244,16 @@ function App() {
                 <p className="text-gray-600">
                   Planifica y organiza el aprendizaje de tus estudiantes
                 </p>
+              </div>
+
+              {/* AI study plan */}
+              <div className="mb-6">
+                <AIPlanCard
+                  students={realStudents}
+                  doneKeysByStudent={doneKeysByStudent}
+                  onOpenPlan={openAIPlan}
+                  onCreate={() => setWizardFor({ student: null })}
+                />
               </div>
 
               {/* Planning Options */}
@@ -3578,7 +3556,36 @@ function App() {
       )}
 
       {/* Onboarding System */}
-      {showWizard && <NewOnboardingWizard onFinish={completeWizard} />}
+      {(showWizard || wizardFor) && (
+        <ChatOnboarding
+          key={wizardFor?.student?.id || (wizardFor ? 'new' : 'first-run')}
+          existingStudent={wizardFor?.student}
+          studentCount={realStudents.length}
+          onSaveStudent={student => { family.upsertStudent(student); setAiPlanStudentId(student.id) }}
+          onFinish={() => { if (showWizard) completeWizard(); setWizardFor(null) }}
+        />
+      )}
+
+      {openLesson && (
+        <LessonModal
+          session={openLesson.session}
+          subjects={studentOf(openLesson.studentId)?.plan.subjects || []}
+          done={doneKeysByStudent[openLesson.studentId]?.has(progressKey(openLesson.session))}
+          onToggleDone={openLesson.session.date && openLesson.studentId ? () => family.toggleDone(openLesson.studentId, openLesson.session) : undefined}
+          onPlay={() => playSession(openLesson.session, openLesson.studentId)}
+          onClose={() => setOpenLesson(null)}
+        />
+      )}
+
+      {playing && (
+        <LessonPlayer
+          session={playing.session}
+          subject={studentOf(playing.studentId)?.plan.subjects.find(s => s.key === playing.session.subjectKey)}
+          done={doneKeysByStudent[playing.studentId]?.has(progressKey(playing.session))}
+          onToggleDone={playing.session.date && playing.studentId ? () => family.toggleDone(playing.studentId, playing.session) : undefined}
+          onClose={() => setPlaying(null)}
+        />
+      )}
       {showTour && <DashboardTour onComplete={completeTour} />}
       {showWeeklyInsights && <WeeklyInsightsCard onDismiss={dismissWeeklyInsights} />}
     </div>
