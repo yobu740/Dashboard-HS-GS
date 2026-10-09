@@ -50,6 +50,8 @@ import { useNewOnboarding, DashboardTour, WeeklyInsightsCard } from './NewOnboar
 import StudentDetailModal from './StudentDetailModal.jsx'
 import { useFamilyStore, progressKey } from './app/store.js'
 import ChatOnboarding from './app/ChatOnboarding.jsx'
+import GuidedOnboarding from './app/GuidedOnboarding.jsx'
+import LecturinaFab from './app/LecturinaFab.jsx'
 import LessonModal from './app/LessonModal.jsx'
 import LessonPlayer from './app/LessonPlayer.jsx'
 import FamilyHome from './app/FamilyHome.jsx'
@@ -3556,14 +3558,26 @@ function App() {
       )}
 
       {/* Onboarding System */}
-      {(showWizard || wizardFor) && (
-        <ChatOnboarding
-          key={wizardFor?.student?.id || (wizardFor ? 'new' : 'first-run')}
-          existingStudent={wizardFor?.student}
+      {/* First plan / new student: guided onboarding. Existing student: follow-up chat. */}
+      {(showWizard || wizardFor) && !wizardFor?.student && (
+        <GuidedOnboarding
+          key={wizardFor ? 'new' : 'first-run'}
           studentCount={realStudents.length}
           onSaveStudent={student => { family.upsertStudent(student); setAiPlanStudentId(student.id) }}
           onFinish={() => { if (showWizard) completeWizard(); setWizardFor(null) }}
         />
+      )}
+      {wizardFor?.student && (
+        <ChatOnboarding
+          key={wizardFor.student.id}
+          existingStudent={wizardFor.student}
+          studentCount={realStudents.length}
+          onSaveStudent={student => { family.upsertStudent(student); setAiPlanStudentId(student.id) }}
+          onFinish={() => setWizardFor(null)}
+        />
+      )}
+      {!showWizard && !wizardFor && !playing && (
+        <LecturinaFab students={realStudents} onChat={student => setWizardFor({ student })} />
       )}
 
       {openLesson && (

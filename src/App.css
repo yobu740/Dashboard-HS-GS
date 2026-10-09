@@ -118,3 +118,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Lecturina (onboarding mascot) gently floating */
+@keyframes lecturina-float {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50% { transform: translateY(-12px) rotate(1.5deg); }
+}
+.lecturina-float { animation: lecturina-float 4.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .lecturina-float { animation: none; }
+}

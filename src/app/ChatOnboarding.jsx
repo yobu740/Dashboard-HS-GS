@@ -43,7 +43,7 @@ function Avatar({ size = 'h-9 w-9' }) {
   return <img src={lecturina} alt="Lecturina" className={`${size} shrink-0 rounded-full bg-teal-50 object-contain`} />
 }
 
-function PlanCard({ plan, name, onOpen, onAccept, accepted }) {
+function PlanCard({ plan, name, onOpen, onAccept, accepted, acceptLabel }) {
   const counts = plan.sessions.reduce((a, s) => ({ ...a, [s.kind]: (a[s.kind] || 0) + 1 }), {})
   return (
     <div className="w-full max-w-xl overflow-hidden rounded-2xl border-2 border-blue-200 bg-white shadow-sm">
@@ -68,7 +68,7 @@ function PlanCard({ plan, name, onOpen, onAccept, accepted }) {
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
           <button type="button" onClick={onOpen} className="rounded-md border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Ver plan completo</button>
-          {!accepted && <button type="button" onClick={onAccept} className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">{ACCEPT}</button>}
+          {!accepted && <button type="button" onClick={onAccept} className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">{acceptLabel}</button>}
         </div>
       </div>
     </div>
@@ -88,6 +88,7 @@ export default function ChatOnboarding({ existingStudent, studentCount = 0, onSa
   const [picked, setPicked] = useState([])
   const [viewPlan, setViewPlan] = useState(null)
   const scrollRef = useRef(null)
+  const acceptLabel = existingStudent ? 'Guardar cambios' : ACCEPT
   const inputRef = useRef(null)
 
   useEffect(() => {
@@ -118,7 +119,7 @@ export default function ChatOnboarding({ existingStudent, studentCount = 0, onSa
         {
           role: 'assistant',
           content: `Aquí está el plan de ${nextProfile.child.name}. Cada lección tiene su día para aprender, practicar y tomar el examen. ¿Lo aceptamos o quieres cambiar algo? Puedes decírmelo con tus palabras.`,
-          quickReplies: [ACCEPT, 'Menos tiempo al día', 'Agregar otra materia', 'Cambiar los días'],
+          quickReplies: [acceptLabel, 'Menos tiempo al día', 'Agregar otra materia', 'Cambiar los días'],
         },
       )
     } catch (err) {
@@ -150,7 +151,7 @@ export default function ChatOnboarding({ existingStudent, studentCount = 0, onSa
     setPicked([])
     const userMsg = { role: 'user', content: text }
     push(userMsg)
-    if (text === ACCEPT && plan) return accept()
+    if ((text === ACCEPT || text === acceptLabel) && plan) return accept()
     if (text === CREATE && ready) return buildPlan(profile)
 
     setBusy('chat')
@@ -208,7 +209,7 @@ export default function ChatOnboarding({ existingStudent, studentCount = 0, onSa
                 <div key={i} className="flex items-end gap-2">
                   <Avatar size="h-8 w-8" />
                   {m.kind === 'plan'
-                    ? <PlanCard plan={m.plan} name={childName} accepted={m.plan !== plan} onOpen={() => setViewPlan(m.plan)} onAccept={() => send(ACCEPT)} />
+                    ? <PlanCard plan={m.plan} name={childName} accepted={m.plan !== plan} onOpen={() => setViewPlan(m.plan)} onAccept={() => send(acceptLabel)} acceptLabel={acceptLabel} />
                     : <p className="max-w-[80%] whitespace-pre-line rounded-2xl rounded-bl-sm border bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm">{m.content}</p>}
                 </div>
               )
@@ -231,7 +232,7 @@ export default function ChatOnboarding({ existingStudent, studentCount = 0, onSa
             <div className="flex flex-wrap gap-2 border-t bg-white px-4 pt-3">
               {chips.map(c => {
                 const sel = picked.includes(c)
-                const primary = c === CREATE || c === ACCEPT
+                const primary = c === CREATE || c === ACCEPT || c === acceptLabel
                 return (
                   <button
                     key={c}
@@ -294,7 +295,7 @@ export default function ChatOnboarding({ existingStudent, studentCount = 0, onSa
           </ul>
           <div className="border-t p-4">
             {plan ? (
-              <button type="button" onClick={() => send(ACCEPT)} disabled={!!busy} className="w-full rounded-md bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-40">{ACCEPT}</button>
+              <button type="button" onClick={() => send(acceptLabel)} disabled={!!busy} className="w-full rounded-md bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-40">{acceptLabel}</button>
             ) : (
               <button type="button" onClick={() => send(CREATE)} disabled={!ready || !!busy} className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-500 py-2 text-sm font-medium text-white hover:bg-blue-600 disabled:opacity-40" title={ready ? '' : `Falta: ${missing.join(', ')}`}>
                 <Sparkles className="h-4 w-4" /> {CREATE}
@@ -311,7 +312,7 @@ export default function ChatOnboarding({ existingStudent, studentCount = 0, onSa
               <h3 className="text-xl font-semibold">El plan de {childName}</h3>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setViewPlan(null)} className="rounded-md border bg-white px-3 py-1.5 text-sm hover:bg-gray-50">Volver al chat</button>
-                <button type="button" onClick={() => { setViewPlan(null); send(ACCEPT) }} className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">{ACCEPT}</button>
+                <button type="button" onClick={() => { setViewPlan(null); send(acceptLabel) }} className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700">{acceptLabel}</button>
               </div>
             </div>
             <div className="space-y-6">
