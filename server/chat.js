@@ -65,7 +65,7 @@ const TURN_SCHEMA = {
   properties: {
     reaction: { type: 'string', description: 'Reacción corta de Lecturina a lo último que dijo el usuario (máx. 1 oración), o cadena vacía.' },
     question: { type: 'string', description: 'La siguiente pregunta, corta y clara (máx. ~15 palabras). En el resumen final puede tener 2-3 oraciones.' },
-    quickReplies: { type: 'array', items: { type: 'string' }, description: '3 a 6 opciones de respuesta cortas, cada una empezando con un emoji.' },
+    quickReplies: { type: 'array', items: { type: 'string' }, description: '3 a 6 opciones de respuesta cortas, sin emojis.' },
     multiSelect: { type: 'boolean', description: 'true si el usuario puede elegir varias respuestas sugeridas a la vez.' },
     updates: UPDATES_SCHEMA,
     regenerate: { type: 'boolean', description: 'true si ya hay un plan y el usuario pidió un cambio que requiere rehacerlo.' },
@@ -89,7 +89,7 @@ const FIELD_GUIDE = {
 const SYSTEM_PROMPT = `Eres Lecturina, la mascota robot de Genial Skills: alegre, cálida y práctica. Conversas con un padre o una madre en Puerto Rico para armar un plan de estudio para su hijo(a) con lecciones de Genial Skills.
 
 Cómo conversar:
-- Escribe en español, en frases cortas (1 a 3 oraciones). Puedes usar algún emoji, sin exagerar.
+- Escribe en español, en frases cortas (1 a 3 oraciones). NO uses emojis ni emoticones en ningún texto.
 - Haz UNA pregunta a la vez (dos solo si son muy cortas y relacionadas). Nunca preguntes algo que ya está en el perfil.
 - Adapta el camino a lo que te cuentan:
   · Si educan en casa (homeschool): materias del plan y cómo va en cada una, intereses o cómo aprende, si quieren alinear con el DEPR, días, tiempo diario y duración.
@@ -97,10 +97,10 @@ Cómo conversar:
   · Si mencionan una dificultad, un diagnóstico o un interés, reconócelo con empatía y úsalo; guarda el detalle en notes.
 - Tu siguiente pregunta debe ser sobre el PRIMER dato de la lista de faltantes, salvo que antes convenga una pregunta corta de seguimiento sobre lo que acaba de contar (una dificultad, un interés). Si el usuario contesta algo distinto a lo que preguntaste, guárdalo y vuelve al primer faltante.
 - Separa tu mensaje en reaction (reconoce con calidez lo que te contó, una oración; vacío si no aplica) y question (la pregunta, directa).
-- Las quickReplies se muestran como botones grandes: ofrece SIEMPRE de 3 a 6 opciones, cada una empezando con un emoji relevante (p. ej. "📐 Matemáticas", "🗓️ Lunes a viernes", "⏱️ 1 hora"). El usuario también puede escribir su propia respuesta.
+- Las quickReplies se muestran como botones grandes: ofrece SIEMPRE de 3 a 6 opciones cortas y sin emojis (p. ej. "Matemáticas", "Lunes a viernes", "1 hora"). El usuario también puede escribir su propia respuesta.
 - Ofrece quickReplies útiles para responder rápido (p. ej. grados, materias, días como "Lunes a viernes", "3 días", tiempos como "30 min", "1 hora", "2 horas", duración como "1 mes", "Un trimestre", "Un semestre", "Año escolar"). Usa multiSelect=true cuando se puedan elegir varias (materias, intereses).
 - En updates pon SOLO lo que el usuario dijo o confirmó en su último mensaje; todo lo demás va en null. Materias: math, spanish (Español), english (Inglés), science (Ciencias), social (Estudios Sociales). Si dice "todas", incluye las CINCO materias en subjects (y marca support según lo que diga de cada una). Si menciona una dificultad de una materia, pon esa materia con support "refuerzo" y la destreza en skills. Grados: k, 1 … 12. Días: 0=domingo, 1=lunes … 6=sábado. "Un mes"=4 semanas, "trimestre"=9, "semestre"=18, "año escolar"=36.
-- Cuando no falte nada, pon en question un resumen de 2-3 oraciones de lo que entendiste y ofrece como quickReplies exactamente "¡Crea mi plan!" y "Quiero cambiar algo" (sin emoji).
+- Cuando no falte nada, pon en question un resumen de 2-3 oraciones de lo que entendiste y ofrece como quickReplies exactamente "¡Crea mi plan!" y "Quiero cambiar algo".
 - Si ya hay un plan y el usuario pide un cambio, actualiza los campos, pon regenerate=true y di que vas a rearmar el plan. Si solo pregunta algo, contesta sin regenerar.
 - No inventes lecciones ni prometas contenido específico; el plan lo arma después el planificador con el catálogo real.`
 
@@ -192,15 +192,15 @@ function parseAnswer(field, text, profile) {
 }
 
 const SCRIPT = {
-  mode: { q: '¡Hola! Soy Lecturina 🤖. ¿Tu hijo(a) estudia en casa o buscas refuerzo en algunas materias?', r: ['🏡 Educamos en casa (homeschool)', '📚 Busco refuerzo en algunas materias'] },
+  mode: { q: '¡Hola! Soy Lecturina. ¿Tu hijo(a) estudia en casa o buscas refuerzo en algunas materias?', r: ['Educamos en casa (homeschool)', 'Busco refuerzo en algunas materias'] },
   childName: { q: '¿Cómo se llama tu hijo(a)?', r: [] },
-  grade: { q: p => `¿En qué grado está ${p.child.name || 'tu hijo(a)'}?`, r: ['🧸 Kinder', '1️⃣ 1er grado', '2️⃣ 2do grado', '3️⃣ 3er grado', '4️⃣ 4to grado', '5️⃣ 5to grado'] },
-  subjects: { q: p => (p.mode === 'refuerzo' ? '¿En qué materias necesita refuerzo?' : '¿Qué materias quieres incluir en el plan?'), r: ['📐 Matemáticas', '📖 Español', '🗣️ Inglés', '🔬 Ciencias', '🌎 Estudios Sociales', '✨ Todas'], multi: true },
+  grade: { q: p => `¿En qué grado está ${p.child.name || 'tu hijo(a)'}?`, r: ['Kinder', '1er grado', '2do grado', '3er grado', '4to grado', '5to grado'] },
+  subjects: { q: p => (p.mode === 'refuerzo' ? '¿En qué materias necesita refuerzo?' : '¿Qué materias quieres incluir en el plan?'), r: ['Matemáticas', 'Español', 'Inglés', 'Ciencias', 'Estudios Sociales', 'Todas'], multi: true },
   skills: { q: '¿Qué destrezas o temas específicos le cuestan? Por ejemplo: fracciones, comprensión lectora, ortografía…', r: [] },
-  depr: { q: '¿Quieres que el plan siga los estándares del Departamento de Educación (DEPR)? Es opcional.', r: ['🏛️ Sí, alinear con el DEPR', '💡 No, enfocarnos en sus intereses'] },
-  days: { q: '¿Qué días puede estudiar?', r: ['🗓️ Lunes a viernes', '3️⃣ 3 días', '2️⃣ 2 días', '🌴 Fines de semana'] },
+  depr: { q: '¿Quieres que el plan siga los estándares del Departamento de Educación (DEPR)? Es opcional.', r: ['Sí, alinear con el DEPR', 'No, enfocarnos en sus intereses'] },
+  days: { q: '¿Qué días puede estudiar?', r: ['Lunes a viernes', '3 días', '2 días', 'Fines de semana'] },
   minutesPerDay: { q: '¿Cuánto tiempo al día pueden dedicarle?', r: ['⏱️ 30 min', '⏱️ 45 min', '⏰ 1 hora', '⏰ 2 horas', '⏰ 3 horas'] },
-  weeks: { q: '¿Por cuánto tiempo quieres el plan?', r: ['📅 1 mes', '🍂 Un trimestre', '📘 Un semestre', '🎓 Año escolar'] },
+  weeks: { q: '¿Por cuánto tiempo quieres el plan?', r: ['1 mes', 'Un trimestre', 'Un semestre', 'Año escolar'] },
 }
 
 function scriptedTurn(messages, profile, planExists) {
@@ -236,6 +236,12 @@ function scriptedTurn(messages, profile, planExists) {
 
 /* ------------------------------------------------------------------ */
 
+/** The product uses no emojis; strip any the model adds. */
+const noEmoji = text => String(text)
+  .replace(/[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}⃣️‍]/gu, '')
+  .replace(/\s{2,}/g, ' ')
+  .trim()
+
 export async function chatTurn({ messages = [], profile, planExists = false }) {
   const current = profile?.child && profile?.schedule ? profile : emptyProfile()
   let turn
@@ -252,11 +258,11 @@ export async function chatTurn({ messages = [], profile, planExists = false }) {
   const missing = missingFields(next)
   const changed = JSON.stringify(next) !== JSON.stringify(current)
   return {
-    reaction: turn.reaction || '',
-    question: turn.question || '',
+    reaction: noEmoji(turn.reaction || ''),
+    question: noEmoji(turn.question || ''),
     // Chat view shows both in one bubble.
-    reply: [turn.reaction, turn.question].filter(Boolean).join(' '),
-    quickReplies: (turn.quickReplies || []).slice(0, 6),
+    reply: noEmoji([turn.reaction, turn.question].filter(Boolean).join(' ')),
+    quickReplies: (turn.quickReplies || []).map(noEmoji).filter(Boolean).slice(0, 6),
     multiSelect: !!turn.multiSelect,
     profile: next,
     missing,

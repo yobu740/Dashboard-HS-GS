@@ -37,7 +37,6 @@ export function deprCoverage(plan, doneKeys) {
       key: subject.key,
       name: subject.name,
       color: subject.color,
-      emoji: subject.emoji,
       source: grade.source,
       total: expectations.length,
       planned: expectations.filter(e => e.planned).length,

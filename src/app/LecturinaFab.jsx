@@ -24,14 +24,14 @@ export default function LecturinaFab({ students, onChat }) {
       <button
         type="button"
         onClick={() => (students.length === 1 ? start(students[0]) : setOpen(o => !o))}
-        className="group flex items-center gap-3 rounded-full bg-white py-1.5 pr-5 pl-1.5 shadow-xl shadow-cyan-900/15 ring-1 ring-slate-200 transition-all hover:-translate-y-0.5 hover:shadow-2xl"
+        className="group flex items-center gap-3 rounded-full bg-white p-1.5 sm:pr-5 shadow-xl shadow-navy/20 ring-1 ring-sand transition-all hover:-translate-y-0.5 hover:shadow-2xl"
         aria-label="Hablar con Lecturina"
       >
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-cyan-500">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white ring-2 ring-gold-light">
           <img src={lecturina} alt="" className="h-11 w-11 transition-transform group-hover:scale-110" />
         </span>
-        <span className="text-left">
-          <span className="block text-sm font-semibold text-slate-800">Lecturina</span>
+        <span className="hidden text-left sm:block">
+          <span className="block font-display text-base font-semibold text-navy">Lecturina</span>
           <span className="block text-xs text-slate-500">¿Ajustamos el plan?</span>
         </span>
       </button>

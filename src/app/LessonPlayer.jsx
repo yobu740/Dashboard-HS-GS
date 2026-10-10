@@ -51,9 +51,9 @@ export default function LessonPlayer({ session, subject, done, onToggleDone, onC
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-slate-900" role="dialog" aria-modal="true" aria-label={session.title}>
-      <div className="flex items-center gap-3 bg-slate-700 px-3 py-2 text-white sm:px-4">
-        <button type="button" onClick={onClose} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium hover:bg-slate-600">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-navy" role="dialog" aria-modal="true" aria-label={session.title}>
+      <div className="flex items-center gap-3 bg-navy px-3 py-2 text-white sm:px-4">
+        <button type="button" onClick={onClose} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium hover:bg-white/10">
           <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Volver al dashboard</span>
         </button>
         <span className="h-6 w-1 shrink-0 rounded-full" style={{ backgroundColor: subject?.color || '#c0a267' }} />
@@ -69,14 +69,14 @@ export default function LessonPlayer({ session, subject, done, onToggleDone, onC
             <span className="w-9 text-right text-xs font-semibold text-slate-200">{percent}%</span>
           </div>
         )}
-        <a href={url} target="_blank" rel="noreferrer" className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-slate-200 hover:bg-slate-600 sm:flex" title="Abrir en una pestaña nueva">
+        <a href={url} target="_blank" rel="noreferrer" className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-slate-200 hover:bg-white/10 sm:flex" title="Abrir en una pestaña nueva">
           <ExternalLink className="h-4 w-4" />
         </a>
         {onToggleDone && (
           <button
             type="button"
             onClick={onToggleDone}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ${done ? 'bg-emerald-500 text-white' : 'bg-[#c0a267] text-slate-900 hover:bg-[#d1b67e]'}`}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ${done ? 'bg-mint text-white' : 'bg-brand text-white hover:bg-brand-dark'}`}
           >
             {done ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
             <span className="hidden sm:inline">{done ? 'Completada' : 'Marcar como completada'}</span>

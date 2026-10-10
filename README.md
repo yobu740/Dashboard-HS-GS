@@ -9,7 +9,7 @@ Dashboard para familias que educan en casa. Un **onboarding con IA** le pregunta
 2. **Generación:** el servidor trae el catálogo publicado de Athenas para el grado (y el grado anterior o siguiente si la materia necesita refuerzo o está avanzada). Un LLM vía **OpenRouter** escoge y ordena lecciones **por ID** (en refuerzo, solo las relacionadas con las destrezas mencionadas). El tiempo semanal se reparte parejo entre materias; las de refuerzo reciben primero las sesiones sobrantes. El servidor descarta IDs inexistentes, limita las lecciones puente a ~30% y completa la secuencia si el modelo se queda corto.
 3. **Ciclo por lección:** cada lección se trabaja en tres días: **Aprender** (concepto, vocabulario, ejemplos) → **Practicar** → **Examen**, intercalado entre lecciones. Las materias con 4+ sesiones por semana tienen un **repaso de destrezas** semanal (2-3 sesiones: cada dos semanas) que vuelve a una lección de semanas anteriores (`shared/scheduler.js`).
 4. **DEPR (opcional):** con el interruptor activo, la IA prioriza cubrir las expectativas de grado de los *Estándares de Contenido y Expectativas de Grado* del DEPR, y Planificación muestra el cumplimiento por materia y dominio (en el plan / completadas al hacer el examen). 95% de las lecciones de Athenas tienen su código de estándar.
-5. **Dashboard original:** mientras no hay estudiantes se ve el contenido demo. Con un plan, Inicio, Estudiantes, Calendario, Planificación (tarjeta "Plan de estudio con IA") y Catálogo usan los datos reales; Portafolio, Tutoría, Mensajería y Comunidad quedan como estaban.
+5. **Dashboard:** Inicio (qué toca hoy por hijo, la semana, próximos exámenes, DEPR), Estudiantes, Planificación (el plan editable), Calendario, Catálogo (lecciones reales, asignar al plan), Portafolio (progreso real, evidencias con fotos, reporte imprimible), Tutoría (tutor IA en cada lección + tutores certificados y agendado) y Comunidad (foro, grupos, eventos, recursos). Sin estudiantes, Inicio es una bienvenida que abre el onboarding.
 6. **Lecciones:** "Empezar" abre la lección de Genial Skills dentro del dashboard (visor de `genial-skills-redesign` en modo `?host=1`, abriendo en la sección del paso con `?section=practice|exam`).
 
 ## Estructura
@@ -29,8 +29,10 @@ shared/
   chat.js         Conversación de onboarding (IA + guion de respaldo)
   depr.js         Expectativas de grado del DEPR y estándares por lección
   depr-standards.json, lesson-standards.json   generados por scripts/build-depr-data.mjs
-src/App.jsx     Dashboard original; monta las vistas reales cuando hay estudiantes
-src/app/        GuidedOnboarding (primer plan), ChatOnboarding + LecturinaFab (seguimiento), PlanView, DeprPanel, FamilyHome/Calendar/Catalog/Students, AIPlanning, LessonPlayer
+src/App.jsx     Navegación y overlays (Lecturina, lección, reproductor)
+src/app/        Shell (header + menú), ui.jsx (kit visual), GuidedOnboarding, ChatOnboarding + LecturinaFab, PlanView, DeprPanel, LessonModal, LessonPlayer
+  sections/     Home, Students, Planning, Calendar, Catalog, Portfolio, Tutoring, Community
+  brand/        Íconos oficiales de Genial Skills (materias y menú), generados por scripts/build-brand-icons.mjs
 ```
 
 Para regenerar los datos del DEPR: `node --env-file=.env.local scripts/build-depr-data.mjs "<ruta a Genial Skill maestros/standards>"`.
@@ -38,7 +40,7 @@ Para regenerar los datos del DEPR: `node --env-file=.env.local scripts/build-dep
 ## Configuración
 
 ```bash
-npm install --legacy-peer-deps   # react-beautiful-dnd (del prototipo viejo) no declara soporte para React 19
+npm install
 cp .env.example .env.local        # llenar las keys
 npm run dev
 ```
@@ -58,3 +60,9 @@ En Vercel, estas mismas variables se configuran en Settings → Environment Vari
 ## Datos
 
 Todo se guarda en `localStorage` bajo la llave `gs_homeschool_v2`: familia, estudiantes, perfiles, planes y progreso. El progreso se guarda por ID de lección, así que se conserva cuando el plan se reorganiza. En Estudiantes, la opción "Borrar todo y empezar de nuevo" vuelve a abrir el onboarding.
+
+## Diseño
+
+Tipografía Fredoka (títulos) + Nunito (texto), como el visor de lecciones. Paleta en `src/App.css` (`navy`, `gold`, `brand` naranja, `cream`, `sand`, `mint`); colores de materia tomados de su ícono oficial (`shared/subjects.js`). Sin emojis: íconos oficiales de Genial Skills para materias y menú, `lucide-react` para controles. Los íconos de **Calendario** y **Comunidad** del menú son provisionales hasta tener los oficiales.
+
+Para revisar visualmente con datos: `node --env-file=.env.local scripts/sample-family.mjs familia.json` y cargar el JSON en `localStorage["gs_homeschool_v2"]`.

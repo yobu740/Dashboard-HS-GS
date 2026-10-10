@@ -5,37 +5,13 @@
 // on grade and instruction language, e.g. high-school science is split into
 // Biology (10), Chemistry (11) and Physics (12).
 
+// Colors come from the official Genial Skills subject artwork.
 export const SUBJECTS = {
-  math: {
-    key: 'math',
-    name: 'Matemáticas',
-    color: '#16a34a',
-    emoji: '➗',
-  },
-  spanish: {
-    key: 'spanish',
-    name: 'Español',
-    color: '#dc2626',
-    emoji: '📖',
-  },
-  english: {
-    key: 'english',
-    name: 'Inglés',
-    color: '#2563eb',
-    emoji: '🗣️',
-  },
-  science: {
-    key: 'science',
-    name: 'Ciencias',
-    color: '#7c3aed',
-    emoji: '🔬',
-  },
-  social: {
-    key: 'social',
-    name: 'Estudios Sociales',
-    color: '#ea580c',
-    emoji: '🌎',
-  },
+  math: { key: 'math', name: 'Matemáticas', color: '#3fae82', soft: '#e6f6ef' },
+  spanish: { key: 'spanish', name: 'Español', color: '#4662e5', soft: '#e9edfc' },
+  english: { key: 'english', name: 'Inglés', color: '#a34787', soft: '#f6e9f2' },
+  science: { key: 'science', name: 'Ciencias', color: '#c48a45', soft: '#f8efe2' },
+  social: { key: 'social', name: 'Estudios Sociales', color: '#d96464', soft: '#fbeaea' },
 }
 
 export const SUBJECT_KEYS = Object.keys(SUBJECTS)

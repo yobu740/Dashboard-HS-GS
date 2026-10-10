@@ -12,7 +12,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, Loader2, Send, Sparkles, X } from 'lucide-react'
 import lecturina from '../assets/lecturina.png'
 import { emptyProfile, plannerProfile, profileSummary } from '../../shared/profile.js'
-import { gradeLabel } from '../../shared/subjects.js'
+import { SUBJECTS, gradeLabel } from '../../shared/subjects.js'
+import { SubjectIcon } from './brand/BrandIcon.jsx'
 import { generatePlan, sendChat } from './api.js'
 import { STUDENT_COLORS, newId } from './store.js'
 import PlanView from './PlanView.jsx'
@@ -22,27 +23,30 @@ const CREATE = '¡Crea mi plan!'
 const CHANGE = 'Quiero cambiar algo'
 
 const FIRST_TURN = {
-  reaction: '¡Hola! Soy Lecturina 👋',
+  reaction: '¡Hola! Soy Lecturina.',
   question: '¿Cómo te puedo ayudar?',
   intro: 'Te haré unas preguntas cortas y armaré un plan de estudio con lecciones de Genial Skills, a la medida de tu hijo(a).',
-  options: ['🏡 Educamos en casa (homeschool)', '📚 Refuerzo en algunas materias', '🎯 Trabajar una destreza específica'],
+  options: ['Educamos en casa (homeschool)', 'Refuerzo en algunas materias', 'Trabajar una destreza específica'],
   multiSelect: false,
 }
 
 const BUILD_STEPS = ['Leyendo lo que me contaste', 'Buscando lecciones de Genial Skills', 'Ordenando la secuencia de cada materia', 'Armando el calendario']
 
-/** "📐 Matemáticas" → { icon: "📐", label: "Matemáticas" } */
+/** Strips a leading emoji the model may still add: "<emoji> Matemáticas" → "Matemáticas". */
 function splitEmoji(option) {
   const m = String(option).match(/^(\p{Extended_Pictographic}(?:️|⃣|‍\p{Extended_Pictographic})*|\d️?⃣)\s*(.*)$/u)
   return m ? { icon: m[1], label: m[2] } : { icon: null, label: option }
 }
 
+const SUBJECT_BY_NAME = Object.fromEntries(Object.values(SUBJECTS).map(s => [s.name.toLowerCase(), s.key]))
+const subjectFromLabel = label => SUBJECT_BY_NAME[String(label).toLowerCase().trim()] || (/^ingl/i.test(label) ? 'english' : /^(sociales|estudios)/i.test(label) ? 'social' : null)
+
 function SpeechBubble({ children, busy }) {
   return (
-    <div className="relative mx-auto max-w-[300px] rounded-3xl bg-white px-5 py-4 text-[15px] leading-snug text-slate-700 shadow-xl shadow-teal-900/10 ring-1 ring-slate-100">
+    <div className="relative mx-auto max-w-[300px] rounded-3xl bg-white px-5 py-4 text-[15px] leading-snug font-semibold text-navy shadow-xl">
       {busy ? (
         <span className="flex h-6 items-center gap-1.5" aria-label="Lecturina está pensando">
-          {[0, 1, 2].map(i => <span key={i} className="h-2.5 w-2.5 animate-bounce rounded-full bg-teal-400" style={{ animationDelay: `${i * 140}ms` }} />)}
+          {[0, 1, 2].map(i => <span key={i} className="h-2.5 w-2.5 animate-bounce rounded-full bg-brand" style={{ animationDelay: `${i * 140}ms` }} />)}
         </span>
       ) : children}
       <span className="absolute -bottom-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-white ring-1 ring-slate-100 [clip-path:polygon(100%_0,100%_100%,0_100%)]" />
@@ -51,13 +55,14 @@ function SpeechBubble({ children, busy }) {
 }
 
 function OptionButton({ option, index, selected, multi, primary, onClick }) {
-  const { icon, label } = splitEmoji(option)
+  const { label } = splitEmoji(option)
+  const subject = subjectFromLabel(label)
   if (primary) {
     return (
       <button
         type="button"
         onClick={onClick}
-        className="group col-span-full flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 px-6 py-5 text-lg font-semibold text-white shadow-lg shadow-cyan-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-cyan-500/40 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-300"
+        className="group col-span-full flex items-center justify-center gap-3 rounded-2xl bg-brand px-6 py-5 font-display text-xl font-semibold text-white shadow-[0_14px_30px_-12px_rgba(244,125,69,0.9)] transition-all hover:-translate-y-0.5 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30"
       >
         <Sparkles className="h-5 w-5 transition-transform group-hover:rotate-12" /> {label}
       </button>
@@ -68,20 +73,20 @@ function OptionButton({ option, index, selected, multi, primary, onClick }) {
       type="button"
       onClick={onClick}
       aria-pressed={multi ? selected : undefined}
-      className={`group relative flex items-center gap-4 rounded-2xl border-2 bg-white px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-200 ${
-        selected ? 'border-teal-500 bg-teal-50/70 shadow-md shadow-teal-500/10' : 'border-slate-200 hover:border-teal-300'
+      className={`group relative flex items-center gap-4 rounded-2xl border-2 bg-white px-4 py-3.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20 ${
+        selected ? 'border-brand bg-[#fff5ee] shadow-md' : 'border-sand hover:border-gold'
       }`}
     >
-      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-2xl transition-transform group-hover:scale-110 ${selected ? 'bg-white' : 'bg-slate-50'}`}>
-        {icon || <ArrowRight className="h-5 w-5 text-teal-500" />}
-      </span>
-      <span className="flex-1 text-[15px] font-semibold leading-snug text-slate-800">{label}</span>
+      {subject
+        ? <SubjectIcon subject={subject} size={36} className="transition-transform group-hover:scale-110" />
+        : <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-display text-lg font-semibold transition-colors ${selected ? 'bg-brand text-white' : 'bg-cream text-gold-dark group-hover:bg-gold-light'}`}>{String.fromCharCode(65 + index)}</span>}
+      <span className="flex-1 text-[15px] leading-snug font-bold text-navy">{label}</span>
       {multi ? (
-        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${selected ? 'border-teal-500 bg-teal-500 text-white' : 'border-slate-300'}`}>
+        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${selected ? 'border-brand bg-brand text-white' : 'border-slate-300'}`}>
           {selected && <Check className="h-3.5 w-3.5" />}
         </span>
       ) : (
-        index < 9 && <kbd className="hidden shrink-0 rounded-md border border-slate-200 px-1.5 text-xs font-medium text-slate-400 sm:block">{index + 1}</kbd>
+        index < 9 && <kbd className="hidden shrink-0 rounded-md border border-sand px-1.5 font-sans text-xs font-bold text-slate-400 sm:block">{index + 1}</kbd>
       )}
     </button>
   )
@@ -118,7 +123,7 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
 
   const build = async nextProfile => {
     setPhase('building')
-    setBubble(`¡Manos a la obra! Estoy armando el plan de ${nextProfile.child.name} ✨`)
+    setBubble(`¡Manos a la obra! Estoy armando el plan de ${nextProfile.child.name}.`)
     try {
       const result = await generatePlan(plannerProfile(nextProfile))
       if (!result.subjects?.length) throw new Error('No encontré lecciones publicadas para esas materias y ese grado.')
@@ -218,7 +223,7 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-2 backdrop-blur-sm sm:p-4" role="dialog" aria-modal="true" aria-label="Plan de estudio con Lecturina">
-      <div className="relative grid h-[min(780px,94vh)] w-full max-w-6xl overflow-hidden rounded-[28px] bg-gradient-to-br from-white via-slate-50 to-cyan-50/60 shadow-2xl lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="relative grid h-[min(780px,94vh)] w-full max-w-6xl overflow-hidden rounded-[32px] bg-cream shadow-2xl lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* Left: question + answers */}
         <section className="flex min-h-0 flex-col">
           <header className="flex items-center gap-4 px-6 pt-6 sm:px-10">
@@ -227,7 +232,7 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
             </button>
             <div className="flex flex-1 items-center gap-1.5" aria-label={`${known} de ${required.length} datos`}>
               {required.map((f, i) => (
-                <span key={f.label} className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${i < known ? 'bg-gradient-to-r from-teal-400 to-cyan-500' : 'bg-slate-200'}`} />
+                <span key={f.label} className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${i < known ? 'bg-brand' : 'bg-sand'}`} />
               ))}
             </div>
             <button type="button" onClick={close} className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700" aria-label="Cerrar"><X className="h-5 w-5" /></button>
@@ -236,14 +241,14 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
           {/* Mobile: Lecturina inline */}
           <div className="flex items-center gap-3 px-6 pt-5 lg:hidden">
             <img src={lecturina} alt="" className="h-14 w-14" />
-            <p className="rounded-2xl rounded-tl-sm bg-white px-4 py-2 text-sm text-slate-700 shadow-sm ring-1 ring-slate-100">{busy ? '…' : bubbleText}</p>
+            <p className="rounded-2xl rounded-tl-sm bg-white px-4 py-2 text-sm font-semibold text-navy shadow-sm">{busy ? '…' : bubbleText}</p>
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6 sm:px-10">
             {phase === 'questions' && (
               <div key={turn.question} className="my-auto animate-in fade-in slide-in-from-bottom-3 duration-500">
-                <p className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-teal-600">Lecturina pregunta</p>
-                <h2 className="text-balance text-3xl font-bold leading-tight text-slate-900 sm:text-[2.5rem]">{turn.question}</h2>
+                <p className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-gold-dark">Lecturina pregunta</p>
+                <h2 className="font-display text-3xl leading-tight font-semibold text-balance text-navy sm:text-[2.6rem]">{turn.question}</h2>
                 {turn.intro && <p className="mt-3 max-w-xl text-lg text-slate-500">{turn.intro}</p>}
 
                 {options.length > 0 && (
@@ -251,7 +256,7 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
                     {options.map((o, i) => (
                       <OptionButton
                         key={o}
-                        option={o === CHANGE ? `✏️ ${o}` : o}
+                        option={o}
                         index={i}
                         multi={turn.multiSelect && o !== CREATE}
                         primary={o === CREATE}
@@ -268,7 +273,7 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
                     type="button"
                     disabled={!picked.length || busy}
                     onClick={() => answer(picked.map(p => splitEmoji(p).label).join(', '))}
-                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-slate-800 disabled:opacity-30"
+                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-navy px-6 py-3 text-sm font-bold text-white transition-all hover:bg-navy-2 disabled:opacity-30"
                   >
                     Continuar{picked.length ? ` (${picked.length})` : ''} <ArrowRight className="h-4 w-4" />
                   </button>
@@ -278,11 +283,11 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
 
             {phase === 'building' && (
               <div className="my-auto animate-in fade-in duration-500">
-                <h2 className="text-3xl font-bold text-slate-900 sm:text-[2.5rem]">Estoy armando el plan de {name}…</h2>
+                <h2 className="font-display text-3xl font-semibold text-navy sm:text-[2.6rem]">Estoy armando el plan de {name}…</h2>
                 <ul className="mt-8 space-y-4">
                   {BUILD_STEPS.map((s, i) => (
                     <li key={s} className={`flex items-center gap-3 text-lg transition-opacity ${i > buildStep ? 'opacity-30' : ''}`}>
-                      {i < buildStep ? <CheckCircle2 className="h-7 w-7 text-teal-500" /> : i === buildStep ? <Loader2 className="h-7 w-7 animate-spin text-cyan-500" /> : <span className="h-7 w-7 rounded-full border-2 border-slate-300" />}
+                      {i < buildStep ? <CheckCircle2 className="h-7 w-7 text-mint" /> : i === buildStep ? <Loader2 className="h-7 w-7 animate-spin text-brand" /> : <span className="h-7 w-7 rounded-full border-2 border-sand" />}
                       <span className="text-slate-700">{s.replace('lecciones', `lecciones de ${gradeLabel(profile.child.level || '3')}`)}</span>
                     </li>
                   ))}
@@ -292,15 +297,15 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
 
             {phase === 'plan' && plan && (
               <div className="my-auto animate-in fade-in slide-in-from-bottom-3 duration-500">
-                <p className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-teal-600">{plan.mode === 'refuerzo' ? 'Plan de refuerzo' : 'Plan de estudio'} listo</p>
-                <h2 className="text-3xl font-bold text-slate-900 sm:text-[2.5rem]">El plan de {name} ✨</h2>
-                <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                <p className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-gold-dark">{plan.mode === 'refuerzo' ? 'Plan de refuerzo' : 'Plan de estudio'} listo</p>
+                <h2 className="font-display text-3xl font-semibold text-navy sm:text-[2.6rem]">El plan de {name}</h2>
+                <div className="mt-6 overflow-hidden rounded-3xl border border-sand bg-white shadow-sm">
                   <div className="space-y-4 p-6">
                     <p className="leading-relaxed text-slate-600">{plan.summary}</p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {plan.subjects.map(s => (
-                        <div key={s.key} className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-                          <span className="text-2xl">{s.emoji}</span>
+                        <div key={s.key} className="flex items-center gap-3 rounded-2xl bg-cream px-4 py-3">
+                          <SubjectIcon subject={s.key} size={32} />
                           <div className="min-w-0">
                             <p className="font-semibold text-slate-800">{s.name}</p>
                             <p className="text-xs text-slate-500">{s.sessionsPerWeek} sesiones/sem · {s.lessons.length} lecciones</p>
@@ -315,10 +320,10 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
                   </div>
                 </div>
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <button type="button" onClick={accept} disabled={busy} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 px-7 py-3.5 font-semibold text-white shadow-lg shadow-cyan-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-40">
+                  <button type="button" onClick={accept} disabled={busy} className="inline-flex items-center gap-2 rounded-full bg-brand px-7 py-3.5 font-bold text-white shadow-[0_14px_30px_-12px_rgba(244,125,69,0.9)] transition-all hover:-translate-y-0.5 hover:bg-brand-dark disabled:opacity-40">
                     <Check className="h-5 w-5" /> Aceptar y empezar
                   </button>
-                  <button type="button" onClick={() => setViewPlan(true)} className="rounded-full border-2 border-slate-200 bg-white px-6 py-3 font-semibold text-slate-700 transition-colors hover:border-slate-300">
+                  <button type="button" onClick={() => setViewPlan(true)} className="rounded-full border border-sand bg-white px-6 py-3 font-bold text-navy transition-colors hover:border-gold">
                     Ver plan completo
                   </button>
                 </div>
@@ -328,7 +333,7 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
 
           {phase !== 'building' && (
             <form onSubmit={e => { e.preventDefault(); answer(input) }} className="px-6 pb-6 sm:px-10">
-              <div className="flex items-center gap-2 rounded-2xl border-2 border-slate-200 bg-white p-1.5 pl-4 shadow-sm transition-colors focus-within:border-teal-400">
+              <div className="flex items-center gap-2 rounded-2xl border-2 border-sand bg-white p-1.5 pl-4 shadow-sm transition-colors focus-within:border-gold">
                 <input
                   ref={inputRef}
                   value={input}
@@ -338,7 +343,7 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
                   aria-label="Respuesta escrita"
                   disabled={busy}
                 />
-                <button type="submit" disabled={!input.trim() || busy} className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white transition-all hover:bg-slate-700 disabled:bg-slate-200" aria-label="Enviar">
+                <button type="submit" disabled={!input.trim() || busy} className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy text-white transition-all hover:bg-navy-2 disabled:bg-sand" aria-label="Enviar">
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </button>
               </div>
@@ -347,9 +352,9 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
         </section>
 
         {/* Right: Lecturina */}
-        <aside className="relative hidden flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-teal-400/90 via-cyan-500/90 to-violet-500/90 px-8 lg:flex">
-          <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-white/15 blur-2xl" />
-          <div className="pointer-events-none absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-violet-300/30 blur-3xl" />
+        <aside className="relative hidden flex-col items-center justify-center overflow-hidden bg-navy px-8 lg:flex">
+          <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-brand/30 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-mint/25 blur-3xl" />
           <div className="relative z-10 flex flex-col items-center">
             {(bubbleText || busy) && (
               <div key={bubbleText} className="mb-6 animate-in fade-in zoom-in-95 duration-300">
@@ -362,13 +367,13 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
                 <img src={lecturina} alt="Lecturina, asistente de Genial Skills" className="h-48 w-48" />
               </div>
             </div>
-            <p className="mt-5 text-lg font-bold text-white">Lecturina</p>
-            <p className="text-sm text-white/80">Tu asistente de Genial Skills</p>
+            <p className="mt-5 font-display text-xl font-semibold text-white">Lecturina</p>
+            <p className="text-sm text-white/70">Tu asistente de Genial Skills</p>
           </div>
           {knownChips.length > 0 && (
             <div className="absolute inset-x-6 bottom-6 z-10 flex flex-wrap justify-center gap-1.5">
               {knownChips.map(f => (
-                <span key={f.label} className="max-w-full truncate rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white backdrop-blur" title={`${f.label}: ${f.value}`}>
+                <span key={f.label} className="max-w-full truncate rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90 ring-1 ring-white/15" title={`${f.label}: ${f.value}`}>
                   {f.value}
                 </span>
               ))}
@@ -379,15 +384,15 @@ export default function GuidedOnboarding({ studentCount = 0, onSaveStudent, onFi
 
       {viewPlan && plan && (
         <div className="fixed inset-0 z-[55] flex items-center justify-center bg-slate-900/50 p-2 sm:p-4" onClick={() => setViewPlan(false)}>
-          <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-gray-50 p-4 shadow-2xl sm:p-6" onClick={e => e.stopPropagation()}>
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-[32px] bg-cream p-4 shadow-2xl sm:p-8" onClick={e => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h3 className="text-xl font-semibold">El plan de {name}</h3>
+              <h3 className="font-display text-2xl font-semibold text-navy">El plan de {name}</h3>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setViewPlan(false)} className="rounded-full border bg-white px-4 py-1.5 text-sm hover:bg-gray-50">Volver</button>
-                <button type="button" onClick={accept} className="rounded-full bg-teal-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-teal-600">Aceptar y empezar</button>
+                <button type="button" onClick={accept} className="rounded-full bg-brand px-4 py-1.5 text-sm font-bold text-white hover:bg-brand-dark">Aceptar y empezar</button>
               </div>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-8">
               <PlanView plan={plan} childLevel={profile.child.level} />
               {plan.depr && <DeprPanel plan={plan} gradeName={gradeLabel(profile.child.level)} />}
             </div>

@@ -266,7 +266,6 @@ function normalizePlan(raw, profile, catalog, capacity) {
       key,
       name: meta.name,
       color: meta.color,
-      emoji: meta.emoji,
       athenasCode: entry.code,
       sessionsPerWeek: Math.max(1, Number(chosen.sessionsPerWeek) || 1),
       focus: chosen.focus,
