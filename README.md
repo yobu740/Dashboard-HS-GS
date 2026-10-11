@@ -11,6 +11,7 @@ Dashboard para familias que educan en casa. Un **onboarding con IA** le pregunta
 4. **DEPR (opcional):** con el interruptor activo, la IA prioriza cubrir las expectativas de grado de los *Estándares de Contenido y Expectativas de Grado* del DEPR, y Planificación muestra el cumplimiento por materia y dominio (en el plan / completadas al hacer el examen). 95% de las lecciones de Athenas tienen su código de estándar.
 5. **Dashboard:** Inicio (qué toca hoy por hijo, la semana, próximos exámenes, DEPR), Estudiantes, Planificación (el plan editable), Calendario, Catálogo (lecciones reales, asignar al plan), Portafolio (progreso real, evidencias con fotos, reporte imprimible), Tutoría (tutor IA en cada lección + tutores certificados y agendado) y Comunidad (foro, grupos, eventos, recursos). Sin estudiantes, Inicio es una bienvenida que abre el onboarding.
 6. **Lecciones:** "Empezar" abre la lección de Genial Skills dentro del dashboard (visor de `genial-skills-redesign` en modo `?host=1`, abriendo en la sección del paso con `?section=practice|exam`).
+7. **Correcciones de la IA (niveles 3 y 4):** en prácticas y exámenes con respuestas escritas, el estudiante contesta escribiendo, en la pizarra (con la herramienta de ecuaciones) o con una foto de su trabajo. El visor se abre con `?reviewer=parent&student=hs-<id>`: la IA corrige con la rúbrica de la lección y **la nota es final** (en Genial Skills escolar la confirma el maestro; aquí el padre solo la recibe). El visor envía el resultado al dashboard con `postMessage({ type: 'gs-assessment', ... })`, que se guarda y se ve en Inicio ("Correcciones de la IA"), en Portafolio (lista, detalle con la respuesta, la pizarra, los puntos por criterio, el comentario y la solución) y en el reporte imprimible. El menú marca las correcciones nuevas. Al entregar un examen, su sesión se marca como hecha.
 
 ## Estructura
 
@@ -59,7 +60,7 @@ En Vercel, estas mismas variables se configuran en Settings → Environment Vari
 
 ## Datos
 
-Todo se guarda en `localStorage` bajo la llave `gs_homeschool_v2`: familia, estudiantes, perfiles, planes y progreso. El progreso se guarda por ID de lección, así que se conserva cuando el plan se reorganiza. En Estudiantes, la opción "Borrar todo y empezar de nuevo" vuelve a abrir el onboarding.
+Todo se guarda en `localStorage` bajo la llave `gs_homeschool_v2`: familia, estudiantes, perfiles, planes y progreso. El progreso se guarda por ID de lección, así que se conserva cuando el plan se reorganiza. Las correcciones de la IA se guardan en `gs_assessments_v1` (las imágenes solo en las 12 más recientes). En Estudiantes, la opción "Borrar todo y empezar de nuevo" vuelve a abrir el onboarding.
 
 ## Diseño
 

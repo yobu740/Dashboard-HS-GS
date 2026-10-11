@@ -12,6 +12,7 @@ import { WEEKDAY_LABELS, parseISODate, toISODate } from '../../../shared/schedul
 import { progressKey } from '../store.js'
 import { deprCoverage } from '../depr.js'
 import { SubjectIcon } from '../brand/BrandIcon.jsx'
+import { CorrectionRow } from '../Corrections.jsx'
 import { Button, KindBadge, Panel, PanelTitle, ProgressBar, Ring, StudentAvatar, subjectMeta } from '../ui.jsx'
 
 const DAY_LETTERS = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
@@ -96,7 +97,7 @@ function SessionRow({ session, student, done, onToggle, onOpen, onPlay }) {
   )
 }
 
-export default function Home({ students, parentName = 'Brian', doneKeysByStudent, toggleDone, openSession, playSession, goTo, onStart }) {
+export default function Home({ students, parentName = 'Brian', doneKeysByStudent, toggleDone, openSession, playSession, goTo, onStart, corrections = [], onOpenCorrection }) {
   const today = toISODate(new Date())
 
   const data = useMemo(() => students.map(student => {
@@ -261,6 +262,26 @@ export default function Home({ students, parentName = 'Brian', doneKeysByStudent
               <span className="font-display font-semibold text-navy">{weekDone} de {weekTotal}</span>
             </div>
           </Panel>
+
+          {corrections.length > 0 && (
+            <Panel className="p-6">
+              <PanelTitle action={<button type="button" onClick={() => goTo('portafolio')} className="text-sm font-bold text-brand hover:underline">Ver todas</button>}>
+                Correcciones de la IA
+              </PanelTitle>
+              {(() => {
+                const unseen = corrections.filter(r => !r.seen)
+                const list = (unseen.length ? unseen : corrections).slice(0, 4)
+                return (
+                  <>
+                    <p className="mb-2 text-sm text-slate-500">{unseen.length ? `${unseen.length} ${unseen.length === 1 ? 'nueva' : 'nuevas'} sin revisar` : 'Las más recientes'}</p>
+                    <div className="-mx-2 space-y-1">
+                      {list.map(r => <CorrectionRow key={r.id} record={r} student={students.find(s => s.id === r.studentId)} showStudent={students.length > 1} onOpen={() => onOpenCorrection(r)} />)}
+                    </div>
+                  </>
+                )
+              })()}
+            </Panel>
+          )}
 
           <Panel className="p-6">
             <PanelTitle>Próximos exámenes</PanelTitle>

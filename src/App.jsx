@@ -4,7 +4,8 @@
 // lives in src/app/sections.
 import { useMemo, useState } from 'react'
 import './App.css'
-import { useFamilyStore, progressKey } from './app/store.js'
+import { useFamilyStore, progressKey, useLocalState, newId } from './app/store.js'
+import { CorrectionDetail } from './app/Corrections.jsx'
 import Shell from './app/Shell.jsx'
 import GuidedOnboarding from './app/GuidedOnboarding.jsx'
 import ChatOnboarding from './app/ChatOnboarding.jsx'
@@ -21,6 +22,10 @@ import Tutoring from './app/sections/Tutoring.jsx'
 import Community from './app/sections/Community.jsx'
 
 const ONBOARDING_SEEN = 'gs_onboarding_seen'
+// Pictures of the child's work (whiteboard / photo) are kept for the most
+// recent corrections only, so browser storage does not fill up.
+const KEEP_IMAGES = 12
+const KEEP_RECORDS = 80
 const PARENT_NAME = 'Brian'
 
 function seenOnboarding() {
@@ -36,6 +41,9 @@ export default function App() {
   const [lecturina, setLecturina] = useState(() => (!students.length && !seenOnboarding() ? { mode: 'guided' } : null))
   const [openLesson, setOpenLesson] = useState(null) // { session, studentId }
   const [playing, setPlaying] = useState(null) // { session, studentId }
+  // AI-graded practices and exams received from the lesson viewer, per student.
+  const [assessments, setAssessments] = useLocalState('gs_assessments_v1', {})
+  const [openCorrection, setOpenCorrection] = useState(null)
 
   const doneKeysByStudent = useMemo(() => Object.fromEntries(
     students.map(s => [s.id, new Set(Object.keys(family.state.progress[s.id] || {}))]),
@@ -53,11 +61,39 @@ export default function App() {
   }
   const saveStudent = student => { family.upsertStudent(student); setFocusStudentId(student.id) }
 
-  const shared = { students, doneKeysByStudent, openSession, playSession, onAdd: startGuided }
+  const addAssessment = (studentId, data, session) => setAssessments(all => {
+    const record = {
+      id: newId(),
+      studentId,
+      seen: false,
+      receivedAt: new Date().toISOString(),
+      kind: data.kind,
+      at: data.at,
+      lessonId: data.lessonId,
+      lessonTitle: session?.title || data.lessonTitle || '',
+      subjectKey: session?.subjectKey,
+      quizTitle: data.quizTitle || '',
+      selection: data.selection || null,
+      elapsedSeconds: data.elapsedSeconds || 0,
+      open: (data.open || []).map(o => ({ questionId: o.questionId, prompt: o.prompt, answer: o.answer, image: o.image || '', imageFrom: o.imageFrom || '', grading: o.grading || null })),
+    }
+    const list = [record, ...(all[studentId] || [])].slice(0, KEEP_RECORDS)
+      .map((r, i) => (i < KEEP_IMAGES ? r : { ...r, open: r.open.map(o => ({ ...o, image: '' })) }))
+    return { ...all, [studentId]: list }
+  })
+  const showCorrection = record => {
+    setOpenCorrection(record)
+    if (!record.seen) setAssessments(all => ({ ...all, [record.studentId]: (all[record.studentId] || []).map(r => (r.id === record.id ? { ...r, seen: true } : r)) }))
+  }
+  const corrections = useMemo(() => students.flatMap(s => (assessments[s.id] || []).map(r => ({ ...r, studentId: s.id })))
+    .sort((a, b) => (b.at || b.receivedAt).localeCompare(a.at || a.receivedAt)), [students, assessments])
+  const unseenCorrections = corrections.filter(r => !r.seen).length
+
+  const shared = { students, doneKeysByStudent, openSession, playSession, onAdd: startGuided, corrections, onOpenCorrection: showCorrection }
 
   return (
     <>
-      <Shell active={section} onNavigate={setSection} parentName={PARENT_NAME}>
+      <Shell active={section} onNavigate={setSection} parentName={PARENT_NAME} badges={{ portafolio: unseenCorrections }}>
         {section === 'inicio' && <Home {...shared} parentName={PARENT_NAME} toggleDone={family.toggleDone} goTo={setSection} onStart={startGuided} />}
         {section === 'estudiantes' && <Students {...shared} onChat={startChat} onRemove={family.removeStudent} onOpenPlan={openPlan} />}
         {section === 'planificacion' && <Planning {...shared} studentId={focusStudentId} setStudentId={setFocusStudentId} store={family} onChat={startChat} />}
@@ -90,11 +126,14 @@ export default function App() {
         <LessonPlayer
           session={playing.session}
           subject={studentOf(playing.studentId)?.plan.subjects.find(s => s.key === playing.session.subjectKey)}
+          student={studentOf(playing.studentId)}
+          onAssessment={(data, session) => addAssessment(playing.studentId, data, session)}
           done={doneKeysByStudent[playing.studentId]?.has(progressKey(playing.session))}
           onToggleDone={playing.session.date && playing.studentId ? () => family.toggleDone(playing.studentId, playing.session) : undefined}
           onClose={() => setPlaying(null)}
         />
       )}
+      {openCorrection && <CorrectionDetail record={openCorrection} student={studentOf(openCorrection.studentId)} onClose={() => setOpenCorrection(null)} />}
     </>
   )
 }

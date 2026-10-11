@@ -9,6 +9,7 @@ import { progressKey, newId, useLocalState } from '../store.js'
 import { deprCoverage } from '../depr.js'
 import { SubjectIcon } from '../brand/BrandIcon.jsx'
 import DeprPanel from '../DeprPanel.jsx'
+import { CorrectionRow, correctionScore } from '../Corrections.jsx'
 import { Button, EmptyState, KindBadge, PageHeader, Panel, PanelTitle, ProgressBar, StudentTabs, subjectMeta } from '../ui.jsx'
 
 const fmtDay = iso => new Date(iso).toLocaleDateString('es-PR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -39,10 +40,15 @@ function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 }
 
-function printReport({ student, stats, bySubject, coverage, completed, evidence, parentName }) {
+function printReport({ student, stats, bySubject, coverage, completed, evidence, corrections = [], parentName }) {
   const rows = bySubject.map(s => `<tr><td>${escapeHtml(s.name)}</td><td>${s.done} / ${s.total}</td><td>${s.practices}</td><td>${s.exams}</td><td>${Math.round(s.minutes / 60 * 10) / 10} h</td></tr>`).join('')
   const depr = coverage.length ? `<h2>Currículo del Departamento de Educación</h2><table><tr><th>Materia</th><th>Expectativas completadas</th><th>En el plan</th><th>Del grado</th></tr>${coverage.map(c => `<tr><td>${escapeHtml(c.name)}</td><td>${c.completed}</td><td>${c.planned}</td><td>${c.total}</td></tr>`).join('')}</table>` : ''
   const done = completed.slice(0, 60).map(c => `<li><strong>${escapeHtml(c.session.title)}</strong> — ${escapeHtml(SUBJECTS[c.session.subjectKey]?.name)} · ${SESSION_KINDS[c.session.kind].label} · ${new Date(c.at).toLocaleDateString('es-PR')}</li>`).join('')
+  const graded = corrections.slice(0, 40).map(r => {
+    const { points, max, sel } = correctionScore(r)
+    const score = [max ? `${points}/${max} escritas` : '', sel ? `${sel.correct}/${sel.total} selección` : ''].filter(Boolean).join(' · ')
+    return `<tr><td>${new Date(r.at || r.receivedAt).toLocaleDateString('es-PR')}</td><td>${escapeHtml(r.lessonTitle)}</td><td>${escapeHtml(SUBJECTS[r.subjectKey]?.name || '')}</td><td>${r.kind === 'exam' ? 'Examen' : 'Práctica'}</td><td>${escapeHtml(score)}</td></tr>`
+  }).join('')
   const ev = evidence.map(e => `<div class="ev">${e.image ? `<img src="${e.image}">` : ''}<p><strong>${escapeHtml(e.title)}</strong><br>${escapeHtml(e.note)}</p></div>`).join('')
   const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Portafolio de ${escapeHtml(student.name)}</title>
 <style>body{font-family:Nunito,Arial,sans-serif;color:#1b2537;margin:40px;max-width:900px}h1{color:#1f3756;margin:0}h2{color:#1f3756;border-bottom:3px solid #f47d45;padding-bottom:6px;margin-top:32px}
@@ -56,6 +62,7 @@ ul{padding-left:18px;font-size:14px;line-height:1.6}.evs{display:grid;grid-templ
 <div class="stats"><div class="stat"><b>${stats.lessons}</b>lecciones completadas</div><div class="stat"><b>${stats.practices}</b>prácticas</div><div class="stat"><b>${stats.exams}</b>exámenes</div><div class="stat"><b>${stats.hours}</b>horas de estudio</div></div>
 <h2>Progreso por materia</h2><table><tr><th>Materia</th><th>Lecciones completadas</th><th>Prácticas</th><th>Exámenes</th><th>Tiempo</th></tr>${rows}</table>
 ${depr}
+${graded ? `<h2>Prácticas y exámenes corregidos por la IA</h2><table><tr><th>Fecha</th><th>Lección</th><th>Materia</th><th>Tipo</th><th>Resultado</th></tr>${graded}</table>` : ''}
 <h2>Trabajo completado</h2>${done ? `<ul>${done}</ul>` : '<p>Aún no hay actividades completadas.</p>'}
 ${evidence.length ? `<h2>Evidencias</h2><div class="evs">${ev}</div>` : ''}
 <p class="foot">Reporte generado por Genial Skills Homeschool con lecciones del catálogo de Genial Skills.</p>
@@ -104,10 +111,12 @@ function EvidenceForm({ student, onSave, onClose }) {
   )
 }
 
-export default function Portfolio({ students, studentId, setStudentId, progress, doneKeysByStudent, parentName, onAdd }) {
+export default function Portfolio({ students, studentId, setStudentId, progress, doneKeysByStudent, parentName, onAdd, corrections = [], onOpenCorrection }) {
   const [evidenceStore, setEvidenceStore] = useLocalState('gs_portfolio_v1', {})
   const [adding, setAdding] = useState(false)
   const student = students.find(s => s.id === studentId) || students[0]
+  const [showAll, setShowAll] = useState(false)
+  const myCorrections = student ? corrections.filter(r => r.studentId === student.id) : []
 
   const view = useMemo(() => {
     if (!student) return null
@@ -171,7 +180,7 @@ export default function Portfolio({ students, studentId, setStudentId, progress,
         actions={(
           <>
             <Button onClick={() => setAdding(true)}><ImagePlus className="h-4 w-4" /> Subir evidencia</Button>
-            <Button variant="primary" onClick={() => printReport({ student, stats: view.stats, bySubject: view.bySubject, coverage: view.coverage, completed: view.completed, evidence, parentName })}><FileDown className="h-4 w-4" /> Reporte de progreso</Button>
+            <Button variant="primary" onClick={() => printReport({ student, stats: view.stats, bySubject: view.bySubject, coverage: view.coverage, completed: view.completed, evidence, corrections: myCorrections, parentName })}><FileDown className="h-4 w-4" /> Reporte de progreso</Button>
           </>
         )}
       />
@@ -240,6 +249,19 @@ export default function Portfolio({ students, studentId, setStudentId, progress,
           </Panel>
         </div>
 
+        <div className="space-y-6">
+        <Panel className="h-fit p-6">
+          <PanelTitle>Correcciones de la IA</PanelTitle>
+          {myCorrections.length ? (
+            <>
+              <p className="mb-3 text-sm text-slate-500">Prácticas y exámenes con respuestas escritas o en la pizarra. La IA los corrige con la rúbrica de cada lección; la nota es final.</p>
+              <div className="-mx-2 space-y-1">
+                {myCorrections.slice(0, showAll ? undefined : 6).map(r => <CorrectionRow key={r.id} record={r} student={student} onOpen={() => onOpenCorrection(r)} />)}
+              </div>
+              {myCorrections.length > 6 && <button type="button" onClick={() => setShowAll(v => !v)} className="mt-2 text-sm font-bold text-brand hover:underline">{showAll ? 'Ver menos' : `Ver las ${myCorrections.length}`}</button>}
+            </>
+          ) : <p className="text-sm text-slate-500">Cuando {student.name} entregue una práctica o un examen en la lección, verás aquí la corrección de la IA: lo que escribió, su pizarra y los puntos de cada criterio.</p>}
+        </Panel>
         <Panel className="h-fit p-6">
           <PanelTitle>Trabajo completado</PanelTitle>
           {view.completed.length ? (
@@ -255,6 +277,7 @@ export default function Portfolio({ students, studentId, setStudentId, progress,
             </ol>
           ) : <p className="text-sm text-slate-500">Cuando {student.name} complete lecciones, prácticas o exámenes, aparecerán aquí con su fecha.</p>}
         </Panel>
+        </div>
       </div>
 
       {adding && <EvidenceForm student={student} onSave={saveEvidence} onClose={() => setAdding(false)} />}

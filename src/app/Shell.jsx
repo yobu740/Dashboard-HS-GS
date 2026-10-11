@@ -17,7 +17,7 @@ export const NAV = [
   { id: 'comunidad', label: 'Comunidad', icon: 'community' },
 ]
 
-function NavList({ active, onNavigate }) {
+function NavList({ active, onNavigate, badges = {} }) {
   return (
     <nav className="flex flex-col gap-1.5 p-3" aria-label="Secciones">
       {NAV.map(item => {
@@ -33,6 +33,7 @@ function NavList({ active, onNavigate }) {
             }`}
           >
             {isActive && <span className="absolute top-1/2 -left-3 h-8 w-1.5 -translate-y-1/2 rounded-r-full bg-white" />}
+            {badges[item.id] > 0 && <span className="absolute top-1.5 right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[11px] font-extrabold text-white ring-2 ring-[#c3a46a]" aria-label={`${badges[item.id]} nuevas`}>{badges[item.id]}</span>}
             <NavIcon name={item.icon} size={38} className="transition-transform duration-200 group-hover:scale-110" />
             <span className="text-[11px] leading-tight font-extrabold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]">{item.label}</span>
           </button>
@@ -64,7 +65,7 @@ function HelpMenu({ onClose }) {
   )
 }
 
-export default function Shell({ active, onNavigate, parentName = 'Brian', children }) {
+export default function Shell({ active, onNavigate, parentName = 'Brian', badges, children }) {
   const [drawer, setDrawer] = useState(false)
   const [help, setHelp] = useState(false)
 
@@ -96,7 +97,7 @@ export default function Shell({ active, onNavigate, parentName = 'Brian', childr
 
       <div className="flex">
         <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[108px] shrink-0 overflow-y-auto bg-gradient-to-b from-[#c8aa6f] to-[#b8975a] lg:block">
-          <NavList active={active} onNavigate={go} />
+          <NavList active={active} onNavigate={go} badges={badges} />
         </aside>
 
         {drawer && (
@@ -104,7 +105,7 @@ export default function Shell({ active, onNavigate, parentName = 'Brian', childr
             <button type="button" className="absolute inset-0 bg-navy/50 backdrop-blur-sm" onClick={() => setDrawer(false)} aria-label="Cerrar menú" />
             <aside className="absolute inset-y-0 left-0 w-[132px] overflow-y-auto bg-gradient-to-b from-[#c8aa6f] to-[#b8975a] pt-3 shadow-2xl animate-in slide-in-from-left duration-200">
               <button type="button" onClick={() => setDrawer(false)} className="mx-auto mb-1 flex rounded-full p-2 text-white hover:bg-white/15" aria-label="Cerrar menú"><X className="h-5 w-5" /></button>
-              <NavList active={active} onNavigate={go} />
+              <NavList active={active} onNavigate={go} badges={badges} />
             </aside>
           </div>
         )}

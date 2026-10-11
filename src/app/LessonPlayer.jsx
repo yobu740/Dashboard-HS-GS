@@ -5,14 +5,19 @@
 // (?host=1: own section menu, no Genial top bar) rather than ?embed=1, which
 // needs same-origin control. In host mode it posts progress messages; when the
 // student finishes, the session is marked done automatically.
+//
+// Practices and exams of levels 3 and 4 have written answers (with a
+// whiteboard or a photo for the work) graded by the AI with the lesson's
+// rubric. The viewer sends each graded result here ("gs-assessment"); it goes
+// to the parent's corrections. The parent receives the grade, does not confirm it.
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, CheckCircle2, Circle, ExternalLink } from 'lucide-react'
 import { lessonUrl, VIEWER_ORIGIN } from './api.js'
 import { SESSION_KINDS } from '../../shared/scheduler.js'
 
-export default function LessonPlayer({ session, subject, done, onToggleDone, onClose }) {
+export default function LessonPlayer({ session, subject, student, done, onToggleDone, onAssessment, onClose }) {
   const kind = SESSION_KINDS[session.kind] || SESSION_KINDS.learn
-  const url = lessonUrl(session.lessonId, subject?.athenasCode || session.subjectCode, kind.section)
+  const url = lessonUrl(session.lessonId, subject?.athenasCode || session.subjectCode, kind.section, student)
   const [percent, setPercent] = useState(null)
   const doneRef = useRef(done)
   doneRef.current = done
@@ -34,10 +39,15 @@ export default function LessonPlayer({ session, subject, done, onToggleDone, onC
         markDone()
         onClose()
       }
+      if (e.data.type === 'gs-assessment' && (e.data.kind === 'exam' || e.data.kind === 'practice')) {
+        onAssessment?.(e.data, session)
+        // Handing in the exam completes an exam session.
+        if (e.data.kind === 'exam' && session.kind === 'exam') markDone()
+      }
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [onToggleDone, onClose])
+  }, [onToggleDone, onAssessment, onClose, session])
 
   useEffect(() => {
     const onKey = e => e.key === 'Escape' && onClose()
@@ -88,7 +98,7 @@ export default function LessonPlayer({ session, subject, done, onToggleDone, onC
         src={url}
         title={session.title}
         className="w-full flex-1 border-0 bg-white"
-        allow="autoplay; fullscreen; microphone; clipboard-write"
+        allow="autoplay; fullscreen; microphone; camera; clipboard-write"
       />
     </div>
   )

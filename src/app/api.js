@@ -41,14 +41,24 @@ export const VIEWER_ORIGIN = new URL(VIEWER_URL).origin
 
 const ENGLISH_CODES = new Set(['en', 'mat-en', 'sci-en', 'bi-en', 'che-en', 'phy-en', 'pc-en'])
 
-/** `section` opens the viewer on concept / practice / exam for that session's step. */
-export function lessonUrl(id, subjectCode, section) {
+/**
+ * `section` opens the viewer on concept / practice / exam for that session's step.
+ * `student` identifies the child to the lesson; with reviewer=parent the
+ * viewer grades exams with the AI as final (no teacher confirms) and sends the
+ * graded practices and exams back to this dashboard (see LessonPlayer).
+ */
+export function lessonUrl(id, subjectCode, section, student) {
   const url = new URL(VIEWER_URL)
   url.searchParams.set('lesson', id)
   if (section && section !== 'concept') url.searchParams.set('section', section)
   url.searchParams.set('live', '1')
   // Host mode: viewer hides its own chrome and reports progress via postMessage.
   url.searchParams.set('host', '1')
+  url.searchParams.set('reviewer', 'parent')
+  if (student) {
+    url.searchParams.set('student', `hs-${student.id}`)
+    url.searchParams.set('studentName', student.name)
+  }
   url.searchParams.set('lang', ENGLISH_CODES.has(subjectCode) ? 'en' : 'es')
   return url.toString()
 }
