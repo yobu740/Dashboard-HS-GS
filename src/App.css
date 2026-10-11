@@ -3,6 +3,23 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Genial Skills brand tokens → bg-navy, text-brand, font-display, … */
+@theme {
+  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fredoka", "Nunito", ui-sans-serif, sans-serif;
+  --color-navy: #1f3756;
+  --color-navy-2: #27466c;
+  --color-ink: #1b2537;
+  --color-gold: #c0a267;
+  --color-gold-dark: #9a7a3d;
+  --color-gold-light: #efe4cc;
+  --color-cream: #f7f4ee;
+  --color-sand: #ebe4d6;
+  --color-brand: #f47d45;
+  --color-brand-dark: #de6630;
+  --color-mint: #48af97;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -49,8 +66,8 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: #1f3756;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -115,6 +132,20 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-cream text-ink font-sans antialiased;
   }
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Lecturina (onboarding mascot) gently floating */
+@keyframes lecturina-float {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50% { transform: translateY(-12px) rotate(1.5deg); }
+}
+.lecturina-float { animation: lecturina-float 4.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .lecturina-float { animation: none; }
 }
